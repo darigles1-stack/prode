@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Info, Grid, Trophy, CheckSquare, Sparkles, Filter, Calendar } from 'lucide-react';
+import { Search, Info, Grid, Trophy, CheckSquare, Sparkles, Filter, Calendar, Lock } from 'lucide-react';
 import { SoccerMatch, Standing, UserForecast } from '../types';
 
 interface ProdeGeneralProps {
@@ -7,16 +7,26 @@ interface ProdeGeneralProps {
   standings: Standing[];
   allForecasts: UserForecast[];
   currentUserUid?: string;
+  isUserAdmin?: boolean;
 }
 
 export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
   matches,
   standings,
   allForecasts,
-  currentUserUid
+  currentUserUid,
+  isUserAdmin = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [matchFilter, setMatchFilter] = useState<'all' | 'pending' | 'finished'>('all');
+
+  // Helper to determine if match predictions are locked
+  const isMatchLocked = (matchDateStr: string) => {
+    const kickoff = new Date(matchDateStr).getTime();
+    const oneHourMs = 60 * 60 * 1000;
+    const lockTime = kickoff - oneHourMs;
+    return Date.now() >= lockTime;
+  };
 
   // Filter matches to make column set more readable if desired
   const displayMatches = matches.filter(m => {
@@ -146,8 +156,12 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                           <span className="bg-slate-900 text-white text-[10px] font-black px-2 py-0.5 rounded-full mt-1 font-mono">
                             {match.homeScore} - {match.awayScore}
                           </span>
+                        ) : isMatchLocked(match.matchDate) ? (
+                          <span className="text-[9px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-bold mt-1">
+                            Cerrado
+                          </span>
                         ) : (
-                          <span className="text-[9px] text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded font-semibold mt-1">
+                          <span className="text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-semibold mt-1">
                             Abierto
                           </span>
                         )}
@@ -204,10 +218,13 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                       {displayMatches.map(match => {
                         const cellForecast = getForecastForCell(userRow.userId, match.id);
                         const isFinished = match.status === 'finished';
+                        const isLocked = isMatchLocked(match.matchDate);
+                        const shouldShowForecast = isCurrent || isUserAdmin || isLocked;
 
                         // Check points status
                         const getCellColorClass = () => {
                           if (!cellForecast) return 'text-slate-350 bg-slate-50/30';
+                          if (!shouldShowForecast) return 'text-slate-400 bg-slate-50/50';
                           if (!isFinished) return 'font-bold bg-white text-slate-700';
                           
                           if (cellForecast.pointsEarned === 3) {
@@ -223,16 +240,22 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                           <td key={match.id} className="py-3 px-3 text-center border-l border-slate-100 min-w-[110px]">
                             <div className={`p-2 text-center text-[11px] font-mono mx-auto max-w-[85px] leading-snug transition-all ${getCellColorClass()}`}>
                               {cellForecast ? (
-                                <>
-                                  <div className="text-xs font-black">
-                                    {cellForecast.homeScore} - {cellForecast.awayScore}
-                                  </div>
-                                  {isFinished && (
-                                    <span className="text-[9px] font-extrabold block mt-0.5">
-                                      +{cellForecast.pointsEarned ?? 0} PTS
-                                    </span>
-                                  )}
-                                </>
+                                shouldShowForecast ? (
+                                  <>
+                                    <div className="text-xs font-black">
+                                      {cellForecast.homeScore} - {cellForecast.awayScore}
+                                    </div>
+                                    {isFinished && (
+                                      <span className="text-[9px] font-extrabold block mt-0.5">
+                                        +{cellForecast.pointsEarned ?? 0} PTS
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic flex items-center justify-center gap-1 select-none font-sans" title="Se revelará cuando cierre la carga">
+                                    <Lock className="h-3 w-3 shrink-0 text-slate-300" /> Oculto
+                                  </span>
+                                )
                               ) : (
                                 <span className="italic select-none font-sans text-slate-405 text-slate-400">Sin cargar</span>
                               )}
