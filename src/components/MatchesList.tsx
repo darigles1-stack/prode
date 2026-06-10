@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Lock, Unlock, CheckCircle2, AlertCircle, Save, Calendar, ShieldCheck, RefreshCcw, Sparkles } from 'lucide-react';
 import { SoccerMatch, UserForecast } from '../types';
-import { getFlagForCountry } from '../lib/worldCupData';
+import { getFlagForCountry, getCountryCode } from '../lib/worldCupData';
 
 interface MatchesListProps {
   matches: SoccerMatch[];
@@ -55,7 +55,8 @@ export const MatchesList: React.FC<MatchesListProps> = ({
       .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '')
       .trim();
     const flag = getFlagForCountry(cleanName);
-    return { name: cleanName, flag };
+    const code = getCountryCode(cleanName);
+    return { name: cleanName, flag, code };
   };
 
   // Toggle predicting employee lists
@@ -307,9 +308,12 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     {/* Home Team */}
                     <div className="flex-1 flex items-center justify-end font-semibold text-sm text-slate-800 pr-2">
                       <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
-                        <span className="text-base filter drop-shadow select-none">
-                          {getTeamNameAndFlag(match.homeTeam).flag}
-                        </span>
+                        <img 
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
+                          alt={getTeamNameAndFlag(match.homeTeam).name} 
+                          title={getTeamNameAndFlag(match.homeTeam).name}
+                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                        />
                         <span>{getTeamNameAndFlag(match.homeTeam).name}</span>
                       </div>
                     </div>
@@ -337,9 +341,12 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     <div className="flex-1 flex items-center justify-start font-semibold text-sm text-slate-800 pl-2">
                       <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
                         <span>{getTeamNameAndFlag(match.awayTeam).name}</span>
-                        <span className="text-base filter drop-shadow select-none">
-                          {getTeamNameAndFlag(match.awayTeam).flag}
-                        </span>
+                        <img 
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
+                          alt={getTeamNameAndFlag(match.awayTeam).name} 
+                          title={getTeamNameAndFlag(match.awayTeam).name}
+                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                        />
                       </div>
                     </div>
                   </div>

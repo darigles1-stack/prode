@@ -12,6 +12,68 @@ export interface WorldCupScheduleMatch {
   visitanteFlag: string;
 }
 
+export const COUNTRY_CODES: Record<string, string> = {
+  "México": "mx",
+  "Sudáfrica": "za",
+  "Corea del Sur": "kr",
+  "Rep. Checa": "cz",
+  "República Checa": "cz",
+  "Canadá": "ca",
+  "Bosnia y Herzegovina": "ba",
+  "Qatar": "qa",
+  "Suiza": "ch",
+  "Brasil": "br",
+  "Marruecos": "ma",
+  "Haití": "ht",
+  "Escocia": "gb-sct",
+  "EE.UU.": "us",
+  "Estados Unidos": "us",
+  "Paraguay": "py",
+  "Australia": "au",
+  "Turquía": "tr",
+  "Alemania": "de",
+  "Curazao": "cw",
+  "Costa de Marfil": "ci",
+  "Ecuador": "ec",
+  "Países Bajos": "nl",
+  "Japón": "jp",
+  "Suecia": "se",
+  "Túnez": "tn",
+  "Bélgica": "be",
+  "Egipto": "eg",
+  "Irán": "ir",
+  "Nueva Zelanda": "nz",
+  "España": "es",
+  "Cabo Verde": "cv",
+  "Arabia Saudí": "sa",
+  "Arabia Saudita": "sa",
+  "Uruguay": "uy",
+  "Francia": "fr",
+  "Senegal": "sn",
+  "Irak": "iq",
+  "Noruega": "no",
+  "Argentina": "ar",
+  "Argelia": "dz",
+  "Austria": "at",
+  "Jordania": "jo",
+  "Portugal": "pt",
+  "RD de Congo": "cd",
+  "Uzbekistán": "uz",
+  "Colombia": "co",
+  "Inglaterra": "gb-eng",
+  "Croacia": "hr",
+  "Ghana": "gh",
+  "Panamá": "pa",
+  "Venezuela": "ve",
+  "Jamaica": "jm",
+  "Honduras": "hn",
+  "Chile": "cl",
+  "Perú": "pe",
+  "Dinamarca": "dk",
+  "Costa Rica": "cr",
+  "Serbia": "rs"
+};
+
 // Map of World Cup 2026 countries to their respective flag emojis
 export const COUNTRY_FLAGS: Record<string, string> = {
   "México": "🇲🇽",
@@ -78,6 +140,11 @@ export const COUNTRY_FLAGS: Record<string, string> = {
 export const getFlagForCountry = (name: string): string => {
   const clean = name.trim();
   return COUNTRY_FLAGS[clean] || "🏳️";
+};
+
+export const getCountryCode = (name: string): string => {
+  const clean = name.trim();
+  return COUNTRY_CODES[clean] || "xx";
 };
 
 export const getTeamDisplayName = (name: string): string => {

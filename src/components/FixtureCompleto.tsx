@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Search, MapPin, Check } from 'lucide-react';
 import { SoccerMatch, UserForecast } from '../types';
-import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry } from '../lib/worldCupData';
+import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry, getCountryCode } from '../lib/worldCupData';
 
 interface FixtureCompletoProps {
   matches: SoccerMatch[];
@@ -210,9 +210,12 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     {/* Home Team */}
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className="text-base select-none" role="img" aria-label={f.local}>
-                          {f.localFlag}
-                        </span>
+                        <img 
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getCountryCode(f.local)}.svg`} 
+                          alt={f.local} 
+                          title={f.local}
+                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                        />
                         <span>{f.local}</span>
                       </div>
                       <span className="font-mono text-xs text-slate-400">Local</span>
@@ -233,9 +236,12 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     {/* Away Team */}
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className="text-base select-none" role="img" aria-label={f.visitante}>
-                          {f.visitanteFlag}
-                        </span>
+                        <img 
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getCountryCode(f.visitante)}.svg`} 
+                          alt={f.visitante} 
+                          title={f.visitante}
+                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                        />
                         <span>{f.visitante}</span>
                       </div>
                       <span className="font-mono text-xs text-slate-400">Visitante</span>
