@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { PlusCircle, CheckCircle, Award, Calendar, RefreshCcw, ShieldAlert, Sparkles } from 'lucide-react';
-import { SoccerMatch } from '../types';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, CheckCircle, Award, Calendar, RefreshCcw, ShieldAlert, Sparkles, Users, Trash2, Shield, ShieldOff } from 'lucide-react';
+import { SoccerMatch, UserProfile } from '../types';
+import { dbService } from '../lib/dbService';
 
 interface AdminPanelProps {
+  currentUser: UserProfile;
   matches: SoccerMatch[];
   onAddMatch: (homeTeam: string, awayTeam: string, matchDateISO: string) => Promise<string>;
   onSettleMatch: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
@@ -17,6 +19,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   prizes,
   onUpdatePrizes
 }) => {
+  // --- User Management ---
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  
+  useEffect(() => {
+    const unsub = dbService.subscribeUsers((data) => {
+      setUsers(data);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleToggleAdmin = async (userId: string, currentStatus: boolean, userEmail: string) => {
+    if (userId === currentUser.uid) return;
+    try {
+      await dbService.toggleAdminStatus(userId, !currentStatus, userEmail);
+    } catch (e) {
+      console.error(e);
+      alert('Error cambiando estado de admin');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === currentUser.uid) return;
+    if (window.confirm('¿Estás seguro de que querés eliminar a este usuario del torneo? Esto borrará su cuenta, pero sus pronósticos podrían quedar huérfanos. ¿Continuar?')) {
+      try {
+        await dbService.deleteUser(userId);
+      } catch (e) {
+        console.error(e);
+        alert('Error eliminando usuario');
+      }
+    }
+  };
+
   // New match form states
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
@@ -391,6 +425,98 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <p className="text-xs text-slate-400">Todos los partidos cargados han sido cerrados y liquidados.</p>
           </div>
         )}
+      </div>
+
+      {/* 4. User Management Module (Full Width) */}
+      <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mt-2">
+        <h3 className="text-base font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+          <Users className="h-5 w-5 text-blue-700" />
+          <span>Gestión de Usuarios Competidores</span>
+        </h3>
+        <p className="text-xs text-slate-500 mb-4">Administrá quiénes participan del torneo, otorgá permisos de administrador o eliminá perfiles si ya no son de la empresa.</p>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-extrabold">
+              <tr>
+                <th className="px-4 py-3 rounded-l-lg">Competidor</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3 text-center">Rol Actual</th>
+                <th className="px-4 py-3 text-center">Puntos</th>
+                <th className="px-4 py-3 rounded-r-lg text-right">Acciones (Peligro)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {users.map(u => {
+                const isMe = u.uid === currentUser.uid;
+                return (
+                  <tr key={u.uid} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-slate-800">
+                      <div className="flex items-center gap-2">
+                        {u.photoURL ? (
+                          <img src={u.photoURL} alt={u.name} className="w-6 h-6 rounded-full" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-700 font-bold uppercase">
+                            {u.name.substring(0, 2)}
+                          </div>
+                        )}
+                        <span>{u.name}</span>
+                        {isMe && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 rounded uppercase font-bold">Vos</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{u.email}</td>
+                    <td className="px-4 py-3 text-center">
+                      {u.isAdmin ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                          <Shield className="w-3 h-3" /> Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                          Jugador
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono font-bold text-slate-700">{u.points}</td>
+                    <td className="px-4 py-3 text-right space-x-2">
+                      <button
+                        onClick={() => handleToggleAdmin(u.uid, !!u.isAdmin, u.email)}
+                        disabled={isMe}
+                        className={`inline-flex items-center justify-center p-1.5 rounded-lg transition-colors border ${
+                          isMe 
+                            ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                            : u.isAdmin 
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                        title={u.isAdmin ? 'Quitar rol Administrador' : 'Hacer Administrador'}
+                      >
+                        {u.isAdmin ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDeleteUser(u.uid)}
+                        disabled={isMe}
+                        className={`inline-flex items-center justify-center p-1.5 rounded-lg transition-colors border ${
+                          isMe 
+                            ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                            : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
+                        }`}
+                        title="Eliminar usuario"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-4 text-xs text-slate-500">No se encontraron usuarios.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>

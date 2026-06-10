@@ -539,6 +539,7 @@ export default function App() {
 
                 {activeTab === 'admin' && isUserAdmin && (
                   <AdminPanel 
+                    currentUser={currentUser!}
                     matches={matches} 
                     onAddMatch={handleAddMatch} 
                     onSettleMatch={handleSettleMatch}

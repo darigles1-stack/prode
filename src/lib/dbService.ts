@@ -830,6 +830,72 @@ export const dbService = {
       window.addEventListener('prode_db_updated', listener);
       return () => window.removeEventListener('prode_db_updated', listener);
     }
+  },
+
+  // --- ADMIN USER MANAGEMENT ---
+  subscribeUsers(callback: (users: UserProfile[]) => void) {
+    if (isFirebaseActive && db) {
+      return onSnapshot(collection(db, 'users'), (snapshot) => {
+        const users: UserProfile[] = [];
+        snapshot.forEach((doc) => {
+          users.push({ ...doc.data() as UserProfile, uid: doc.id });
+        });
+        callback(users);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'users');
+      });
+    } else {
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      callback(users);
+
+      const listener = () => {
+        callback(getLocalData<UserProfile>('users', SEED_USERS));
+      };
+      window.addEventListener('prode_db_updated', listener);
+      return () => window.removeEventListener('prode_db_updated', listener);
+    }
+  },
+
+  async deleteUser(userId: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `users/${userId}`);
+        throw err;
+      }
+    } else {
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      setLocalData('users', users.filter(u => u.uid !== userId));
+      window.dispatchEvent(new Event('prode_db_updated'));
+    }
+  },
+
+  async toggleAdminStatus(userId: string, newIsAdmin: boolean, userEmail: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        // Update user doc
+        await updateDoc(doc(db, 'users', userId), { isAdmin: newIsAdmin });
+        
+        // Update admins collection
+        if (newIsAdmin) {
+          await setDoc(doc(db, 'admins', userId), { email: userEmail, assignedAt: Timestamp.now() });
+        } else {
+          await deleteDoc(doc(db, 'admins', userId));
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
+        throw err;
+      }
+    } else {
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      const idx = users.findIndex(u => u.uid === userId);
+      if (idx > -1) {
+        users[idx].isAdmin = newIsAdmin;
+        setLocalData('users', users);
+        window.dispatchEvent(new Event('prode_db_updated'));
+      }
+    }
   }
 };
 
