@@ -81,6 +81,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [settleErr, setSettleErr] = useState<{ [matchId: string]: string }>({});
 
+  // Bulk JSON Upload states
+  const [bulkJson, setBulkJson] = useState('');
+  const [bulkStatus, setBulkStatus] = useState<{ type: 'error' | 'success', msg: string } | null>(null);
+  const [isBulking, setIsBulking] = useState(false);
+
+  // Only obtain pending matches to calculate settling scores
+  const pendingMatches = matches.filter(m => m.status === 'pending');
+
+  const handleGenerateJsonTemplate = () => {
+    const template = pendingMatches.map(m => {
+      // Remove flags for clean team names in the template
+      const cleanHome = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+      const cleanAway = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+      return {
+        local: cleanHome,
+        visitante: cleanAway,
+        golesLocal: 0,
+        golesVisitante: 0
+      };
+    });
+    setBulkJson(JSON.stringify(template, null, 2));
+    setBulkStatus(null);
+  };
+
+  const handleBulkSettle = async () => {
+    setBulkStatus(null);
+    if (!bulkJson.trim()) {
+      setBulkStatus({ type: 'error', msg: 'Ingresá el JSON con los resultados.' });
+      return;
+    }
+
+    let parsed: any[];
+    try {
+      parsed = JSON.parse(bulkJson);
+      if (!Array.isArray(parsed)) throw new Error('Root is not an array');
+    } catch (e) {
+      setBulkStatus({ type: 'error', msg: 'Formato JSON inválido. Asegurate de que sea un Array válido.' });
+      return;
+    }
+
+    setIsBulking(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const item of parsed) {
+      if (!item.local || !item.visitante || typeof item.golesLocal !== 'number' || typeof item.golesVisitante !== 'number') {
+        errorCount++;
+        continue;
+      }
+
+      // Find match
+      const homeSearch = item.local.toLowerCase().trim();
+      const awaySearch = item.visitante.toLowerCase().trim();
+
+      const match = pendingMatches.find(m => 
+        m.homeTeam.toLowerCase().includes(homeSearch) && 
+        m.awayTeam.toLowerCase().includes(awaySearch)
+      );
+
+      if (match) {
+        try {
+          await onSettleMatch(match.id, item.golesLocal, item.golesVisitante);
+          successCount++;
+        } catch (e) {
+          errorCount++;
+        }
+      } else {
+        errorCount++;
+      }
+    }
+
+    setIsBulking(false);
+    if (successCount > 0 && errorCount === 0) {
+      setBulkStatus({ type: 'success', msg: `¡Se liquidaron ${successCount} partidos correctamente!` });
+      setBulkJson('');
+    } else if (successCount > 0 && errorCount > 0) {
+      setBulkStatus({ type: 'success', msg: `Se liquidaron ${successCount} partidos. Hubo error o no se encontraron ${errorCount} partidos.` });
+    } else {
+      setBulkStatus({ type: 'error', msg: `No se pudo liquidar ningún partido. Revisá los nombres de los equipos o si ya estaban liquidados.` });
+    }
+  };
+
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!homeTeam.trim() || !awayTeam.trim() || !matchDate) {
@@ -177,9 +259,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setSettlingId(null);
     }
   };
-
-  // Only obtain pending matches to calculate settling scores
-  const pendingMatches = matches.filter(m => m.status === 'pending');
 
   return (
     <div id="admin-panel" className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
@@ -426,6 +505,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <p className="text-xs text-slate-400">Todos los partidos cargados han sido cerrados y liquidados.</p>
           </div>
         )}
+
+        {/* Bulk Upload JSON Module within the Settle Matches block */}
+        <div className="mt-8 border-t border-slate-200 pt-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-3">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800">Carga Masiva de Resultados (JSON)</h4>
+              <p className="text-[11px] text-slate-500">Ideal si tenés muchos partidos que finalizar a la vez. <button onClick={handleGenerateJsonTemplate} className="text-blue-600 hover:underline font-bold">Generar plantilla base de partidos pendientes</button>.</p>
+            </div>
+            
+            <button
+              onClick={handleBulkSettle}
+              disabled={isBulking}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-extrabold px-4 py-2 rounded-lg text-xs transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer whitespace-nowrap"
+            >
+              {isBulking ? (
+                <>
+                  <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Procesando...</span>
+                </>
+              ) : (
+                <>
+                  <Award className="h-3.5 w-3.5" />
+                  <span>Liquidar Masivamente</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <textarea
+            value={bulkJson}
+            onChange={(e) => setBulkJson(e.target.value)}
+            placeholder={'[\n  { "local": "Argentina", "visitante": "Francia", "golesLocal": 2, "golesVisitante": 0 }\n]'}
+            className="w-full h-32 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-y"
+            spellCheck="false"
+          />
+
+          {bulkStatus && (
+            <div className={`mt-2 text-xs font-bold p-2.5 rounded-lg border ${
+              bulkStatus.type === 'success' 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                : 'bg-rose-50 text-rose-600 border-rose-200'
+            }`}>
+              {bulkStatus.msg}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 4. User Management Module (Full Width) */}
