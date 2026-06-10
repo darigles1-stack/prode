@@ -13,6 +13,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
+  currentUser,
   matches,
   onAddMatch,
   onSettleMatch,
@@ -447,20 +448,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.map(u => {
-                const isMe = u.uid === currentUser.uid;
+              {users?.map(u => {
+                const isMe = currentUser && u.uid === currentUser.uid;
+                const displayName = u.name || 'NN';
                 return (
                   <tr key={u.uid} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-800">
                       <div className="flex items-center gap-2">
                         {u.photoURL ? (
-                          <img src={u.photoURL} alt={u.name} className="w-6 h-6 rounded-full" />
+                          <img src={u.photoURL} alt={displayName} className="w-6 h-6 rounded-full" />
                         ) : (
                           <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-700 font-bold uppercase">
-                            {u.name.substring(0, 2)}
+                            {displayName.substring(0, 2)}
                           </div>
                         )}
-                        <span>{u.name}</span>
+                        <span>{displayName}</span>
                         {isMe && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 rounded uppercase font-bold">Vos</span>}
                       </div>
                     </td>
@@ -476,7 +478,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center font-mono font-bold text-slate-700">{u.points}</td>
+                    <td className="px-4 py-3 text-center font-mono font-bold text-slate-700">{u.points || 0}</td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleToggleAdmin(u.uid, !!u.isAdmin, u.email)}
@@ -509,7 +511,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </tr>
                 );
               })}
-              {users.length === 0 && (
+              {users?.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-xs text-slate-500">No se encontraron usuarios.</td>
                 </tr>
