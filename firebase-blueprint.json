@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with cumulative tournament scores",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "points": { "type": "number" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "points", "createdAt"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A soccer/football match in the tournament",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "homeTeam": { "type": "string" },
+        "awayTeam": { "type": "string" },
+        "matchDate": { "type": "string", "format": "date-time" },
+        "homeScore": { "type": "number" },
+        "awayScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "finished"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["homeTeam", "awayTeam", "matchDate", "status", "createdAt"]
+    },
+    "Forecast": {
+      "title": "Forecast",
+      "description": "An employee's score forecast for a specific match",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "matchId": { "type": "string" },
+        "homeScore": { "type": "number" },
+        "awayScore": { "type": "number" },
+        "pointsEarned": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "matchId", "homeScore", "awayScore", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user records"
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Matches in the tournament"
+    },
+    "/forecasts/{forecastId}": {
+      "schema": "Forecast",
+      "description": "User forecasts for matches"
+    }
+  }
+}

@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn();
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "darigles1@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validations
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.points is int &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMatch(data) {
+      return data.homeTeam is string && data.homeTeam.size() <= 100 &&
+             data.awayTeam is string && data.awayTeam.size() <= 100 &&
+             data.matchDate is timestamp &&
+             data.status in ['pending', 'finished'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidForecast(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() <= 200 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.matchId is string && data.matchId.size() <= 128 &&
+             data.homeScore is int && data.homeScore >= 0 && data.homeScore <= 99 &&
+             data.awayScore is int && data.awayScore >= 0 && data.awayScore <= 99 &&
+             data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read, list: if isSignedIn();
+      allow create: if isVerified() && request.auth.uid == userId && isValidUser(incoming()) && incoming().points == 0;
+      allow update: if isVerified() && (
+        // Regular user modifying their own profile (cannot change points or isAdmin)
+        (request.auth.uid == userId && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'photoURL', 'updatedAt']) &&
+         incoming().points == existing().points) ||
+        // Admin can update anything (e.g. updating points or isAdmin flag)
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /matches/{matchId} {
+      allow read, list: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /forecasts/{forecastId} {
+      allow read, list: if isSignedIn();
+      allow create: if isVerified() && 
+                    incoming().userId == request.auth.uid && 
+                    isValidForecast(incoming()) &&
+                    // Check physical existence of the match
+                    exists(/databases/$(database)/documents/matches/$(incoming().matchId)) &&
+                    // Restrict creation to 1 hour before kickoff
+                    request.time < get(/databases/$(database)/documents/matches/$(incoming().matchId)).data.matchDate - duration.value(3600, 's');
+      
+      allow update: if isVerified() && (
+        // Regular user modifying their own forecast (cannot change userId, matchId, pointsEarned)
+        (existing().userId == request.auth.uid && 
+         isValidForecast(incoming()) &&
+         // Limit to 1 hour before kickoff
+         request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(3600, 's') &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['homeScore', 'awayScore', 'updatedAt']) &&
+         (!existing().keys().hasAny(['pointsEarned']) || incoming().pointsEarned == existing().pointsEarned)) ||
+        // Admin settling predictions or correcting
+        isAdmin()
+      );
+      
+      allow delete: if isVerified() && existing().userId == request.auth.uid && 
+                    request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(3600, 's');
+    }
+
+    // Admins index collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Prode Corporativo Web",
+  "description": "Torneo de Pronosticos para Empleados con autenticacion segura, tabla de posiciones en tiempo real e ingresos de resultados para administradores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
