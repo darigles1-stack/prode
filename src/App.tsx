@@ -662,7 +662,10 @@ export default function App() {
               🤖 Sistema Diseñado & Acelerado con Inteligencia Artificial (IA)
             </span>
             <p className="text-center text-slate-500 text-xs">
-              Nos complace compartir con todos los colaboradores de <strong>Banco de Corrientes S.A.</strong> que esta plataforma interactiva de pronósticos deportivos ha sido desarrollada y perfeccionada utilizando la última generación de <strong>Inteligencia Artificial</strong>. Esta potente sinergia nos demuestra cómo la tecnología nos ampara para acelerar tareas complejas, automatizar cálculos interactivos y promover la integración y diversión sana entre los equipos de la institución.
+              Nos complace compartir con todos los colaboradores de <strong>Banco de Corrientes S.A.</strong> que esta plataforma interactiva de pronósticos deportivos ha sido desarrollada e implementada por nuestro <strong>Equipo Mobile</strong>, con la ayuda de la última generación de <strong>Inteligencia Artificial</strong> para poder llegar a este increíble resultado en un tiempo récord. Esta potente sinergia nos demuestra cómo la tecnología nos ampara para acelerar tareas complejas, automatizar cálculos interactivos y promover la integración y diversión sana entre los equipos de la institución.
+            </p>
+            <p className="text-center text-slate-600 font-medium text-xs mt-2">
+              Invitamos a toda la empresa a <em>amigarse con la IA</em>, explorarla y aprovechar toda su potencia para revolucionar sus tareas diarias y llevar los próximos desarrollos a un nuevo nivel.
             </p>
             <p className="font-bold text-center text-blue-900 mt-2 select-none">
               ¡Les deseamos el mayor de los éxitos en sus predicciones y marcadores! ⚽🇦🇷🧉
