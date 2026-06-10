@@ -896,6 +896,42 @@ export const dbService = {
         window.dispatchEvent(new Event('prode_db_updated'));
       }
     }
+  },
+
+  async updateUserCorporateData(userId: string, legajo: string, gerencia: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        await updateDoc(doc(db, 'users', userId), { 
+          legajo, 
+          gerencia,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
+        throw err;
+      }
+    } else {
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      const idx = users.findIndex(u => u.uid === userId);
+      if (idx > -1) {
+        users[idx].legajo = legajo;
+        users[idx].gerencia = gerencia;
+        users[idx].updatedAt = new Date().toISOString();
+        setLocalData('users', users);
+        
+        // Update local session cache if it's the current user
+        const currentUserStr = localStorage.getItem('prode_current_user');
+        if (currentUserStr) {
+          const cu = JSON.parse(currentUserStr);
+          if (cu.uid === userId) {
+            cu.legajo = legajo;
+            cu.gerencia = gerencia;
+            localStorage.setItem('prode_current_user', JSON.stringify(cu));
+          }
+        }
+        window.dispatchEvent(new Event('prode_db_updated'));
+      }
+    }
   }
 };
 

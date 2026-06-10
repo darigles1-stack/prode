@@ -5,6 +5,8 @@ export interface UserProfile {
   photoURL?: string;
   points: number;
   isAdmin?: boolean;
+  legajo?: string;
+  gerencia?: string;
   createdAt: string;
   updatedAt?: string;
 }
