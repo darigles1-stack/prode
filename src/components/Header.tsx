@@ -53,14 +53,17 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Context Badges & User Panel */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Database Engine Status Badge */}
-            <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-mono border ${
-              isFirebaseActive 
-                ? 'bg-blue-900/50 text-yellow-300 border-blue-800' 
-                : 'bg-amber-950/40 text-amber-400 border-amber-900/60'
-            }`}>
-              <Database className="h-3.5 w-3.5" />
-              <span>{isFirebaseActive ? 'Firestore Activo' : 'Simulador Local (Portable)'}</span>
-            </div>
+                      {/* 
+          <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-mono border ${
+            isFirebaseActive 
+              ? 'bg-blue-900/50 text-yellow-300 border-blue-800' 
+              : 'bg-amber-950/40 text-amber-400 border-amber-900/60'
+          }`}>
+            <Database className="h-3.5 w-3.5" />
+            <span>{isFirebaseActive ? 'Firestore Activo' : 'Simulador Local (Portable)'}</span>
+          </div>
+          */}
+
 
             {user ? (
               <div className="flex items-center gap-4 bg-blue-900/40 border border-blue-800/80 pl-3 pr-1 py-1 rounded-xl">
