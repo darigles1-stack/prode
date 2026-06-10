@@ -67,6 +67,31 @@ export default function App() {
   const [customEmail, setCustomEmail] = useState('');
   const [landingErr, setLandingErr] = useState('');
 
+  // Onboarding Modal States
+  const [onboardLegajo, setOnboardLegajo] = useState('');
+  const [onboardGerencia, setOnboardGerencia] = useState('');
+  const [onboardLoading, setOnboardLoading] = useState(false);
+  const [onboardErr, setOnboardErr] = useState('');
+
+  const showOnboarding = currentUser && (!currentUser.legajo || !currentUser.gerencia);
+
+  const handleSaveOnboarding = async () => {
+    if (!onboardLegajo.trim() || !onboardGerencia.trim()) {
+      setOnboardErr('Ambos campos son obligatorios para continuar.');
+      return;
+    }
+    setOnboardLoading(true);
+    setOnboardErr('');
+    try {
+      await dbService.updateUserCorporateData(currentUser!.uid, onboardLegajo.trim(), onboardGerencia.trim());
+      setCurrentUser({ ...currentUser!, legajo: onboardLegajo.trim(), gerencia: onboardGerencia.trim() });
+    } catch (err) {
+      setOnboardErr('Error al guardar los datos. Intentá de nuevo.');
+    } finally {
+      setOnboardLoading(false);
+    }
+  };
+
   // 1. Initial Subscriptions setup
   useEffect(() => {
     // Auth Listener
@@ -554,6 +579,78 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Mandatory Onboarding Modal Overlay */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[100] bg-blue-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200"
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-center text-white relative">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                <Award className="h-12 w-12 mx-auto mb-3 text-yellow-400" />
+                <h2 className="text-xl font-black tracking-tight">Completá tus datos</h2>
+                <p className="text-blue-100 text-xs mt-1">Requisito obligatorio para cobrar premios</p>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <p className="text-sm text-slate-600 leading-relaxed text-center font-medium">
+                  Hola <span className="font-bold text-blue-700">{currentUser.name}</span>, necesitamos que confirmes tu número de legajo y gerencia. Esto nos permite identificarte si resultás ganador.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+                      Número de Legajo
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: 12345"
+                      value={onboardLegajo}
+                      onChange={e => setOnboardLegajo(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+                      Gerencia / Sector
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Sistemas, Comercial, RRHH..."
+                      value={onboardGerencia}
+                      onChange={e => setOnboardGerencia(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                {onboardErr && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-600 text-xs font-bold">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>{onboardErr}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveOnboarding}
+                  disabled={onboardLoading}
+                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {onboardLoading ? 'Guardando...' : 'Guardar y Continuar al Prode'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Footer Info credit with corporate AI and bonding notice */}
       <footer className="py-8 border-t border-slate-200 text-center text-xs text-slate-500 mt-12 bg-white">

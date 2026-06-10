@@ -113,13 +113,13 @@ export const PrizesTab: React.FC<PrizesTabProps> = ({ prizes }) => {
 
       </div>
 
-      {/* Fair Play & Corporate Bonding Message */}
       <div className="bg-blue-50 border border-blue-150 p-5 rounded-2xl space-y-3">
         <h4 className="font-bold text-sm text-blue-900 flex items-center gap-1.5">
           <ShieldCheck className="h-4.5 w-4.5 text-blue-700" />
           <span>Reglamento y Condiciones de Competencia</span>
         </h4>
         <ul className="space-y-2 text-xs text-blue-805 text-blue-800 leading-relaxed list-disc list-inside">
+          <li><strong>Identidad</strong>: Para poder reclamar y cobrar cualquier premio, es requisito obligatorio y excluyente tener declarado el Número de Legajo y la Gerencia real a la que pertenece el usuario dentro del sistema.</li>
           <li><strong>Puntuación</strong>: Se otorgarán <strong>3 puntos</strong> por acertar el resultado exacto ("Pleno") y <strong>1 punto</strong> si se acierta al ganador o empate errando la cantidad de goles.</li>
           <li><strong>Cierre de Carga</strong>: Los pronósticos de cada partido se bloquean estrictamente <strong>1 hora antes</strong> de la fecha y hora programada para el pitazo inicial.</li>
           <li><strong>Transparencia</strong>: Los pronósticos de todos los compañeros se pueden auditar en tiempo real en la pestaña de <strong>Prode General</strong> una vez que el partido esté bloqueado para evitar plagios estratégicos de marcadores.</li>
