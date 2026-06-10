@@ -305,12 +305,12 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   {/* High visual SCORE BOARD container */}
                   <div className="bg-slate-55 border border-slate-150 bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between shadow-inner">
                     {/* Home Team */}
-                    <div className="flex-1 text-center font-semibold text-sm text-slate-800 pr-2">
-                      <div className="text-3xl mb-1.5 filter drop-shadow hover:scale-110 transition-transform select-none">
-                        {getTeamNameAndFlag(match.homeTeam).flag}
-                      </div>
-                      <div className="truncate text-slate-800 font-extrabold text-xs tracking-tight">
-                        {getTeamNameAndFlag(match.homeTeam).name}
+                    <div className="flex-1 flex items-center justify-end font-semibold text-sm text-slate-800 pr-2">
+                      <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
+                        <span className="text-base filter drop-shadow select-none">
+                          {getTeamNameAndFlag(match.homeTeam).flag}
+                        </span>
+                        <span>{getTeamNameAndFlag(match.homeTeam).name}</span>
                       </div>
                     </div>
 
@@ -334,12 +334,12 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     </div>
 
                     {/* Away Team */}
-                    <div className="flex-1 text-center font-semibold text-sm text-slate-800 pl-2">
-                      <div className="text-3xl mb-1.5 filter drop-shadow hover:scale-110 transition-transform select-none">
-                        {getTeamNameAndFlag(match.awayTeam).flag}
-                      </div>
-                      <div className="truncate text-slate-800 font-extrabold text-xs tracking-tight">
-                        {getTeamNameAndFlag(match.awayTeam).name}
+                    <div className="flex-1 flex items-center justify-start font-semibold text-sm text-slate-800 pl-2">
+                      <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
+                        <span>{getTeamNameAndFlag(match.awayTeam).name}</span>
+                        <span className="text-base filter drop-shadow select-none">
+                          {getTeamNameAndFlag(match.awayTeam).flag}
+                        </span>
                       </div>
                     </div>
                   </div>

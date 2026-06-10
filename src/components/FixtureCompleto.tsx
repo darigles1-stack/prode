@@ -210,7 +210,7 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     {/* Home Team */}
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl select-none" role="img" aria-label={f.local}>
+                        <span className="text-base select-none" role="img" aria-label={f.local}>
                           {f.localFlag}
                         </span>
                         <span>{f.local}</span>
@@ -233,7 +233,7 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     {/* Away Team */}
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl select-none" role="img" aria-label={f.visitante}>
+                        <span className="text-base select-none" role="img" aria-label={f.visitante}>
                           {f.visitanteFlag}
                         </span>
                         <span>{f.visitante}</span>
