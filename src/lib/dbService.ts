@@ -27,12 +27,35 @@ import {
 import { SoccerMatch, UserProfile, UserForecast, Standing } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Support Vercel / dynamic environment variables overrides
+const globalEnv = (import.meta as any).env || {};
+const envConfig = {
+  apiKey: globalEnv.VITE_FIREBASE_API_KEY,
+  authDomain: globalEnv.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: globalEnv.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: globalEnv.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: globalEnv.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: globalEnv.VITE_FIREBASE_APP_ID,
+  firestoreDatabaseId: globalEnv.VITE_FIREBASE_FIRESTORE_DATABASE_ID,
+};
+
+// Merge workspace configuration with any dynamic VITE_ environment variables
+export const activeConfig = {
+  apiKey: envConfig.apiKey || firebaseConfig?.apiKey,
+  authDomain: envConfig.authDomain || firebaseConfig?.authDomain,
+  projectId: envConfig.projectId || firebaseConfig?.projectId,
+  storageBucket: envConfig.storageBucket || firebaseConfig?.storageBucket,
+  messagingSenderId: envConfig.messagingSenderId || firebaseConfig?.messagingSenderId,
+  appId: envConfig.appId || firebaseConfig?.appId,
+  firestoreDatabaseId: envConfig.firestoreDatabaseId || firebaseConfig?.firestoreDatabaseId,
+};
+
 // Detect if real Firebase is configured
 export const isFirebaseActive = 
-  firebaseConfig && 
-  firebaseConfig.apiKey && 
-  firebaseConfig.apiKey !== 'placeholder' &&
-  firebaseConfig.projectId !== 'placeholder';
+  activeConfig && 
+  activeConfig.apiKey && 
+  activeConfig.apiKey !== 'placeholder' &&
+  activeConfig.projectId !== 'placeholder';
 
 let app;
 let auth: any = null;
@@ -40,9 +63,11 @@ let db: any = null;
 
 if (isFirebaseActive) {
   try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    app = getApps().length === 0 ? initializeApp(activeConfig) : getApp();
     auth = getAuth(app);
-    db = getFirestore(app);
+    db = activeConfig.firestoreDatabaseId 
+      ? getFirestore(app, activeConfig.firestoreDatabaseId)
+      : getFirestore(app);
 
     // Validate connection to Firestore as requested in specs
     const testConnection = async () => {
