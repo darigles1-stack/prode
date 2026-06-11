@@ -90,15 +90,15 @@ service cloud.firestore {
                     isValidForecast(incoming()) &&
                     // Check physical existence of the match
                     exists(/databases/$(database)/documents/matches/$(incoming().matchId)) &&
-                    // Restrict creation to 15 minutes before kickoff
-                    request.time < get(/databases/$(database)/documents/matches/$(incoming().matchId)).data.matchDate - duration.value(900, 's');
+                    // Restrict creation to 5 minutes before kickoff
+                    request.time < get(/databases/$(database)/documents/matches/$(incoming().matchId)).data.matchDate - duration.value(300, 's');
       
       allow update: if isVerified() && (
         // Regular user modifying their own forecast (cannot change userId, matchId, pointsEarned)
         (existing().userId == request.auth.uid && 
          isValidForecast(incoming()) &&
-         // Limit to 15 minutes before kickoff
-         request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(900, 's') &&
+         // Limit to 5 minutes before kickoff
+         request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(300, 's') &&
          incoming().diff(existing()).affectedKeys().hasOnly(['homeScore', 'awayScore', 'updatedAt']) &&
          (!existing().keys().hasAny(['pointsEarned']) || incoming().pointsEarned == existing().pointsEarned)) ||
         // Admin settling predictions or correcting
@@ -106,7 +106,7 @@ service cloud.firestore {
       );
       
       allow delete: if isVerified() && existing().userId == request.auth.uid && 
-                    request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(900, 's');
+                    request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(300, 's');
     }
 
     // Admins index collection

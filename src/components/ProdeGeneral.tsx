@@ -219,7 +219,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                         const cellForecast = getForecastForCell(userRow.userId, match.id);
                         const isFinished = match.status === 'finished';
                         const isLocked = isMatchLocked(match.matchDate);
-                        const shouldShowForecast = isCurrent || isUserAdmin || isLocked;
+                        const shouldShowForecast = isCurrent || isLocked;
 
                         // Check points status
                         const getCellColorClass = () => {
