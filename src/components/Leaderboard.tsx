@@ -128,54 +128,54 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
 
       {/* Corporate Prizes Display Card */}
       <div id="corporate-prizes-accent" className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-amber-600/10 border border-amber-500/25 rounded-2xl p-5 text-slate-800 text-left">
-  <div className="flex items-center space-x-2 mb-2.5">
-    <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
-    <h3 className="font-extrabold text-sm uppercase tracking-wider text-amber-900">
-      Premios del Podio Corporativo
-    </h3>
-  </div>
-  <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-    ¡Competí sanamente con tus compañeros de <strong>BanCo</strong>! El torneo corporativo de pronósticos otorgará los siguientes premios a los 3 empleados que finalicen en la cima del ranking:
-  </p>
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {/* First Prize Card */}
-    <div className="bg-white border hover:border-amber-400 border-amber-200 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
-      <span className="text-2xl mt-0.5 select-none">🥇</span>
-      <div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primer Puesto</div>
-        <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
-          {prizes?.first || `15.000.000 puntos para canjear en Tienda MÁSBanCo
+        <div className="flex items-center space-x-2 mb-2.5">
+          <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-amber-900">
+            Premios del Podio Corporativo
+          </h3>
+        </div>
+        <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+          ¡Competí sanamente con tus compañeros de <strong>BanCo</strong>! El torneo corporativo de pronósticos otorgará los siguientes premios a los 3 empleados que finalicen en la cima del ranking:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* First Prize Card */}
+          <div className="bg-white border hover:border-amber-400 border-amber-200 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
+            <span className="text-2xl mt-0.5 select-none">🥇</span>
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primer Puesto</div>
+              <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
+                {prizes?.first || `15.000.000 puntos para canjear en Tienda MÁSBanCo
 Kit de aliento:
 👕 Camiseta + 👒 Piluso + 🏳️ Bandera + 🥤 Termo + 🧉 Mate + 🎒 Mochila`}
-        </p>
-      </div>
-    </div>
-    {/* Second Prize Card */}
-    <div className="bg-white border hover:border-slate-400 border-slate-200 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
-      <span className="text-2xl mt-0.5 select-none">🥈</span>
-      <div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segundo Puesto</div>
-        <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
-          {prizes?.second || `10.000.000 puntos para canjear en Tienda MÁSBanCo
+              </p>
+            </div>
+          </div>
+          {/* Second Prize Card */}
+          <div className="bg-white border hover:border-slate-400 border-slate-200 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
+            <span className="text-2xl mt-0.5 select-none">🥈</span>
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segundo Puesto</div>
+              <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
+                {prizes?.second || `10.000.000 puntos para canjear en Tienda MÁSBanCo
 Kit de aliento:
 👕 Camiseta + 🎒 Mochila + 📓 Libreta`}
-        </p>
-      </div>
-    </div>
-    {/* Third Prize Card */}
-    <div className="bg-white border hover:border-amber-600/50 border-amber-500/20 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
-      <span className="text-2xl mt-0.5 select-none">🥉</span>
-      <div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tercer Puesto</div>
-        <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
-          {prizes?.third || `5.000.000 puntos para canjear en Tienda MÁSBanCo
+              </p>
+            </div>
+          </div>
+          {/* Third Prize Card */}
+          <div className="bg-white border hover:border-amber-600/50 border-amber-500/20 rounded-xl p-4 flex items-start space-x-3 transition-all hover:shadow-sm">
+            <span className="text-2xl mt-0.5 select-none">🥉</span>
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tercer Puesto</div>
+              <p className="text-xs font-black text-slate-800 leading-snug mt-1 whitespace-pre-line">
+                {prizes?.third || `5.000.000 puntos para canjear en Tienda MÁSBanCo
 Kit de aliento:
 👕 Camiseta + 🧢 Gorro + 🍼 Botella + 📓 Libreta`}
-        </p>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
 
       {/* Standings Grid / List */}
@@ -209,7 +209,7 @@ Kit de aliento:
                   <th className="py-3.5 px-5 text-center w-16">Pos</th>
                   <th className="py-3.5 px-3">Participante</th>
                   <th className="py-3.5 px-3 text-center">Puntos</th>
-                  <th className="py-3.5 px-3 text-center hidden md:table-cell">Pronósticos</th>
+
                   <th className="py-3.5 px-3 text-center hidden sm:table-cell">Resultado Exacto (+3)</th>
                   <th className="py-3.5 px-3 text-center hidden sm:table-cell">Acertó Ganador (+1)</th>
                 </tr>
@@ -265,10 +265,7 @@ Kit de aliento:
                         </span>
                       </td>
 
-                      {/* Prognostics Count Cell */}
-                      <td className="py-4 px-3 text-center font-mono text-slate-500 hidden md:table-cell">
-                        {row.forecastsCount}
-                      </td>
+
 
                       {/* Exact Hits Cell */}
                       <td className="py-4 px-3 text-center hidden sm:table-cell">
