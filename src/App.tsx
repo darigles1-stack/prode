@@ -5,13 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Trophy, 
-  Calendar, 
-  Settings, 
-  LogIn, 
-  UserPlus, 
-  ShieldAlert, 
+import {
+  Trophy,
+  Calendar,
+  Settings,
+  LogIn,
+  UserPlus,
+  ShieldAlert,
   AlertTriangle,
   Info,
   Grid,
@@ -46,9 +46,9 @@ export default function App() {
     const stored = localStorage.getItem('prode_prizes');
     if (stored) return JSON.parse(stored);
     return {
-      first: "Smart TV 55'' 4K + Camiseta de la Selección Oficial 🇦🇷",
-      second: "Kit de Asado Premium (Tabla de Quebracho con Cubiertos grabados) 🥩",
-      third: "Combo Matero Stanley Corporativo BanCo Corrientes 🧉"
+      first: "A definir",
+      second: "A definir",
+      third: "A definir"
     };
   });
 
@@ -178,7 +178,7 @@ export default function App() {
       setLandingErr('Formato de correo inválido');
       return;
     }
-    
+
     setLandingErr('');
     try {
       const u = await dbService.createMockUser(customName.trim(), customEmail.toLowerCase().trim());
@@ -228,13 +228,13 @@ export default function App() {
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      
+
       {/* 1. Header Navigation HUD */}
-      <Header 
-        user={currentUser} 
+      <Header
+        user={currentUser}
         logo={currentUser ? doradoLogo : bancoLogo}
-        isFirebaseActive={isFirebaseActive} 
-        onLogout={handleLogout} 
+        isFirebaseActive={isFirebaseActive}
+        onLogout={handleLogout}
         onLogin={handleGoogleLogin}
         standings={standings}
       />
@@ -242,10 +242,10 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <AnimatePresence mode="wait">
           {loadingAuth ? (
-            <motion.div 
-              key="auth-loading" 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
+            <motion.div
+              key="auth-loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center p-16 space-y-4 text-center flex-1 h-[60vh]"
             >
@@ -254,7 +254,7 @@ export default function App() {
             </motion.div>
           ) : !currentUser ? (
             // 2. Unauthenticated Cover/Landing View
-            <motion.div 
+            <motion.div
               key="landing-auth"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -266,18 +266,18 @@ export default function App() {
                 <div className="absolute top-4 right-4 bg-yellow-500/25 border border-yellow-500/20 px-3 py-1 rounded-full text-[10px] font-mono text-yellow-300 animate-pulse">
                   {isFirebaseActive ? 'Servidor Conectado' : 'Modo Simulador'}
                 </div>
-                
+
                 {/* Brand Corporate Logo */}
                 <div className="flex justify-center mb-6">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                     className="bg-white p-5 rounded-3xl shadow-2xl shadow-slate-950/50 border border-slate-700/20 flex items-center justify-center"
                   >
-                    <img 
-                      src={bancoLogo} 
-                      alt="BanCo - El Banco de Corrientes" 
+                    <img
+                      src={bancoLogo}
+                      alt="BanCo - El Banco de Corrientes"
                       className="h-28 md:h-36 w-auto object-contain"
                       referrerPolicy="no-referrer"
                     />
@@ -391,7 +391,7 @@ export default function App() {
             </motion.div>
           ) : (
             // 3. Authenticated App Home View
-            <motion.div 
+            <motion.div
               key="auth-home"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -400,9 +400,9 @@ export default function App() {
             >
               {/* Optional Local Profile switcher widget at the top */}
               {!isFirebaseActive && (
-                <ProfileSelector 
-                  currentUser={currentUser} 
-                  onSelectUser={handleSelectSimulatedProfile} 
+                <ProfileSelector
+                  currentUser={currentUser}
+                  onSelectUser={handleSelectSimulatedProfile}
                   onCreateUser={handleCreateSimulatedProfile}
                 />
               )}
@@ -411,90 +411,85 @@ export default function App() {
               <div className="flex border-b border-slate-200">
                 <button
                   onClick={() => setActiveTab('matches')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                    activeTab === 'matches' 
-                      ? 'text-blue-900 font-extrabold' 
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'matches'
+                      ? 'text-blue-900 font-extrabold'
                       : 'text-slate-400 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Calendar className="h-4 w-4" />
                   <span>Fixture y Pronósticos</span>
                   {activeTab === 'matches' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    <motion.div
+                      layoutId="active-tab-line"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('fixture-completo')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                    activeTab === 'fixture-completo' 
-                      ? 'text-blue-900 font-extrabold' 
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'fixture-completo'
+                      ? 'text-blue-900 font-extrabold'
                       : 'text-slate-400 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Calendar className="h-4 w-4 text-emerald-600" />
                   <span>Fixture Completo 🗓️</span>
                   {activeTab === 'fixture-completo' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    <motion.div
+                      layoutId="active-tab-line"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('standings')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                    activeTab === 'standings' 
-                      ? 'text-blue-900 font-extrabold' 
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'standings'
+                      ? 'text-blue-900 font-extrabold'
                       : 'text-slate-400 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Trophy className="h-4 w-4" />
                   <span>Tabla de Posiciones</span>
                   {activeTab === 'standings' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    <motion.div
+                      layoutId="active-tab-line"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('prode-general')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                    activeTab === 'prode-general' 
-                      ? 'text-blue-900 font-extrabold' 
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prode-general'
+                      ? 'text-blue-900 font-extrabold'
                       : 'text-slate-400 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Grid className="h-4 w-4" />
                   <span>Prode General</span>
                   {activeTab === 'prode-general' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    <motion.div
+                      layoutId="active-tab-line"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('prizes')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                    activeTab === 'prizes' 
-                      ? 'text-blue-900 font-extrabold' 
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prizes'
+                      ? 'text-blue-900 font-extrabold'
                       : 'text-slate-400 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Award className="h-4 w-4 text-amber-500" />
                   <span>Premios del Podio</span>
                   {activeTab === 'prizes' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    <motion.div
+                      layoutId="active-tab-line"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
                     />
                   )}
                 </button>
@@ -502,18 +497,17 @@ export default function App() {
                 {isUserAdmin && (
                   <button
                     onClick={() => setActiveTab('admin')}
-                    className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
-                      activeTab === 'admin' 
-                        ? 'text-yellow-600 font-extrabold' 
+                    className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'admin'
+                        ? 'text-yellow-600 font-extrabold'
                         : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                      }`}
                   >
                     <Settings className="h-4 w-4" />
                     <span>Panel de Control (Admin)</span>
                     {activeTab === 'admin' && (
-                      <motion.div 
-                        layoutId="active-tab-line" 
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" 
+                      <motion.div
+                        layoutId="active-tab-line"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500"
                       />
                     )}
                   </button>
@@ -523,11 +517,11 @@ export default function App() {
               {/* Active Tab rendering */}
               <div className="pt-2">
                 {activeTab === 'matches' && (
-                  <MatchesList 
-                    matches={matches} 
-                    forecasts={forecasts} 
+                  <MatchesList
+                    matches={matches}
+                    forecasts={forecasts}
                     allForecasts={allForecasts}
-                    onSaveForecast={handleSaveForecast} 
+                    onSaveForecast={handleSaveForecast}
                     userId={currentUser.uid}
                     isUserAdmin={isUserAdmin}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
@@ -535,15 +529,15 @@ export default function App() {
                 )}
 
                 {activeTab === 'fixture-completo' && (
-                  <FixtureCompleto 
+                  <FixtureCompleto
                     matches={matches}
                     forecasts={forecasts}
                   />
                 )}
 
                 {activeTab === 'standings' && (
-                  <Leaderboard 
-                    standings={standings} 
+                  <Leaderboard
+                    standings={standings}
                     currentUser={currentUser}
                     prizes={prizes}
                   />
@@ -563,10 +557,10 @@ export default function App() {
                 )}
 
                 {activeTab === 'admin' && isUserAdmin && (
-                  <AdminPanel 
+                  <AdminPanel
                     currentUser={currentUser!}
-                    matches={matches} 
-                    onAddMatch={handleAddMatch} 
+                    matches={matches}
+                    onAddMatch={handleAddMatch}
                     onSettleMatch={handleSettleMatch}
                     prizes={prizes}
                     onUpdatePrizes={handleUpdatePrizes}
@@ -656,7 +650,7 @@ export default function App() {
       <footer className="py-8 border-t border-slate-200 text-center text-xs text-slate-500 mt-12 bg-white">
         <div className="max-w-3xl mx-auto px-4 space-y-4">
           <p className="font-black text-slate-700">Prode Corporativo Web – Torneo Oficial de Empleados de BanCo</p>
-          
+
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl text-left space-y-2.5 text-[11px] text-slate-600 max-w-2xl mx-auto leading-relaxed">
             <span className="font-bold text-blue-900 block text-center">
               🤖 Sistema Diseñado & Acelerado con Inteligencia Artificial (IA)
@@ -671,7 +665,7 @@ export default function App() {
               ¡Les deseamos el mayor de los éxitos en sus predicciones y marcadores! ⚽🇦🇷🧉
             </p>
           </div>
-          
+
           <p className="text-[10px] text-slate-400">
             © {new Date().getFullYear()} Banco de Corrientes S.A. • Procesamiento de Datos Protegido
           </p>

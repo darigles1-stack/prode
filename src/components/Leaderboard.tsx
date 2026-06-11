@@ -12,7 +12,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filter lists based on input query
-  const filteredStandings = standings.filter(s => 
+  const filteredStandings = standings.filter(s =>
     s.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -25,7 +25,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
 
   return (
     <div id="leaderboard-panel" className="space-y-6">
-      
+
       {/* Visual Podium Highlights */}
       {standings.length > 0 && (
         <div className="bg-blue-950 border border-blue-900 rounded-2xl p-6 shadow-md">
@@ -33,7 +33,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <Trophy className="h-4 w-4 text-amber-400" />
             <span>Podio de Líderes</span>
           </h3>
-          
+
           <div className="grid grid-cols-3 items-end gap-2 md:gap-4 max-w-lg mx-auto pt-4 pb-2">
             {/* 2nd Place */}
             <div className="flex flex-col items-center">
@@ -142,7 +142,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primer Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.first || "Smart TV 55'' 4K + Camiseta de la Selección Oficial 🇦🇷"}
+                {prizes?.first || "A definir"}
               </p>
             </div>
           </div>
@@ -152,7 +152,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segundo Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.second || "Kit de Asado Premium (Tabla de Quebracho con Cubiertos grabados) 🥩"}
+                {prizes?.second || "A definir"}
               </p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tercer Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.third || "Combo Matero Stanley Corporativo BanCo Corrientes 🧉"}
+                {prizes?.third || "A definir"}
               </p>
             </div>
           </div>
@@ -171,7 +171,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
 
       {/* Standings Grid / List */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        
+
         {/* Search header bar */}
         <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -209,20 +209,18 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
                 {filteredStandings.map((row) => {
                   const isCurrent = currentUser && row.userId === currentUser.uid;
                   return (
-                    <tr 
-                      key={row.userId} 
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        isCurrent ? 'bg-blue-50 hover:bg-blue-100/60 font-medium' : ''
-                      }`}
+                    <tr
+                      key={row.userId}
+                      className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? 'bg-blue-50 hover:bg-blue-100/60 font-medium' : ''
+                        }`}
                     >
                       {/* Position Cell */}
                       <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold leading-none ${
-                          row.position === 1 ? 'bg-amber-100 text-amber-800' :
-                          row.position === 2 ? 'bg-slate-100 text-slate-700' :
-                          row.position === 3 ? 'bg-amber-50 text-amber-700' :
-                          'text-slate-500'
-                        }`}>
+                        <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold leading-none ${row.position === 1 ? 'bg-amber-100 text-amber-800' :
+                            row.position === 2 ? 'bg-slate-100 text-slate-700' :
+                              row.position === 3 ? 'bg-amber-50 text-amber-700' :
+                                'text-slate-500'
+                          }`}>
                           {row.position}
                         </span>
                       </td>
