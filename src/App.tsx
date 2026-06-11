@@ -41,16 +41,28 @@ export default function App() {
   const [allForecasts, setAllForecasts] = useState<UserForecast[]>([]);
   const [standings, setStandings] = useState<Standing[]>([]);
 
-  // Corporate Prizes Configuration State
-  const [prizes, setPrizes] = useState<{ first: string; second: string; third: string }>(() => {
-    const stored = localStorage.getItem('prode_prizes');
-    if (stored) return JSON.parse(stored);
-    return {
-      first: "2.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta y piluso + bandera + termo + mate + mochila",
-      second: "1.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta + mochila + libreta)",
-      third: "500.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising  (Camiseta + gorro + botella + libreta)"
+ const [prizes, setPrizes] = useState<{ first: string; second: string; third: string }>(() => {
+  const stored = localStorage.getItem('prode_prizes');
+  if (stored) return JSON.parse(stored);
+  return {
+    first: `1° Premio:
+  15.000.000 puntos para canjear en Tienda MÁSBanCo
+  Kit de aliento:
+  👕 Camiseta + 👒 Piluso + 🏳️ Bandera + 🥤 Termo + 🧉 Mate + 🎒 Mochila`,
+
+      second: `2° Premio:
+  10.000.000 puntos para canjear en Tienda MÁSBanCo
+  Kit de aliento:
+  👕 Camiseta + 🎒 Mochila + 📓 Libreta`,
+
+      third: `3° Premio:
+  5.000.000 puntos para canjear en Tienda MÁSBanCo
+  Kit de aliento:
+  👕 Camiseta + 🧢 Gorro + 🍼 Botella + 📓 Libreta`
     };
   });
+
+
 
   const handleUpdatePrizes = (newPrizes: { first: string; second: string; third: string }) => {
     setPrizes(newPrizes);
