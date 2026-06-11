@@ -142,7 +142,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primer Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.first || "A definir"}
+                {prizes?.first || "2.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta y piluso + bandera + termo + mate + mochila"}
               </p>
             </div>
           </div>
@@ -152,7 +152,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segundo Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.second || "A definir"}
+                {prizes?.second || "1.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta + mochila + libreta"}
               </p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tercer Puesto</div>
               <p className="text-xs font-black text-slate-800 leading-snug mt-1">
-                {prizes?.third || "A definir"}
+                {prizes?.third || "500.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising  (Camiseta + gorro + botella + libreta)"}
               </p>
             </div>
           </div>
@@ -217,9 +217,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
                       {/* Position Cell */}
                       <td className="py-4 px-5 text-center">
                         <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold leading-none ${row.position === 1 ? 'bg-amber-100 text-amber-800' :
-                            row.position === 2 ? 'bg-slate-100 text-slate-700' :
-                              row.position === 3 ? 'bg-amber-50 text-amber-700' :
-                                'text-slate-500'
+                          row.position === 2 ? 'bg-slate-100 text-slate-700' :
+                            row.position === 3 ? 'bg-amber-50 text-amber-700' :
+                              'text-slate-500'
                           }`}>
                           {row.position}
                         </span>

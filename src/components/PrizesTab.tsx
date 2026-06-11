@@ -46,7 +46,7 @@ export const PrizesTab: React.FC<PrizesTabProps> = ({ prizes }) => {
                 Primer Puesto
               </h4>
               <p className="text-base font-black text-slate-800 leading-snug mt-1">
-                {prizes.first || "A definir"}
+                {prizes.first || "2.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta y piluso + bandera + termo + mate + mochila"}
               </p>
             </div>
           </div>
@@ -73,7 +73,7 @@ export const PrizesTab: React.FC<PrizesTabProps> = ({ prizes }) => {
                 Segundo Puesto
               </h4>
               <p className="text-base font-black text-slate-800 leading-snug mt-1">
-                {prizes.second || "A definir"}
+                {prizes.second || "1.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta + mochila + libreta)"}
               </p>
             </div>
           </div>
@@ -100,7 +100,7 @@ export const PrizesTab: React.FC<PrizesTabProps> = ({ prizes }) => {
                 Tercer Puesto
               </h4>
               <p className="text-base font-black text-slate-800 leading-snug mt-1">
-                {prizes.third || "A definir"}
+                {prizes.third || "500.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising  (Camiseta + gorro + botella + libreta)"}
               </p>
             </div>
           </div>

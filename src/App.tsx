@@ -46,9 +46,9 @@ export default function App() {
     const stored = localStorage.getItem('prode_prizes');
     if (stored) return JSON.parse(stored);
     return {
-      first: "A definir",
-      second: "A definir",
-      third: "A definir"
+      first: "2.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta y piluso + bandera + termo + mate + mochila",
+      second: "1.000.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising (Camiseta + mochila + libreta)",
+      third: "500.000 de puntos para canjear en Tienda MÁSBanCo más un kit de merchandising  (Camiseta + gorro + botella + libreta)"
     };
   });
 
@@ -412,8 +412,8 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('matches')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'matches'
-                      ? 'text-blue-900 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                    ? 'text-blue-900 font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
                     }`}
                 >
                   <Calendar className="h-4 w-4" />
@@ -429,8 +429,8 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('fixture-completo')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'fixture-completo'
-                      ? 'text-blue-900 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                    ? 'text-blue-900 font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
                     }`}
                 >
                   <Calendar className="h-4 w-4 text-emerald-600" />
@@ -446,8 +446,8 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('standings')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'standings'
-                      ? 'text-blue-900 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                    ? 'text-blue-900 font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
                     }`}
                 >
                   <Trophy className="h-4 w-4" />
@@ -463,8 +463,8 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('prode-general')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prode-general'
-                      ? 'text-blue-900 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                    ? 'text-blue-900 font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
                     }`}
                 >
                   <Grid className="h-4 w-4" />
@@ -480,8 +480,8 @@ export default function App() {
                 <button
                   onClick={() => setActiveTab('prizes')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prizes'
-                      ? 'text-blue-900 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
+                    ? 'text-blue-900 font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
                     }`}
                 >
                   <Award className="h-4 w-4 text-amber-500" />
@@ -498,8 +498,8 @@ export default function App() {
                   <button
                     onClick={() => setActiveTab('admin')}
                     className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'admin'
-                        ? 'text-yellow-600 font-extrabold'
-                        : 'text-slate-400 hover:text-slate-700'
+                      ? 'text-yellow-600 font-extrabold'
+                      : 'text-slate-400 hover:text-slate-700'
                       }`}
                   >
                     <Settings className="h-4 w-4" />
