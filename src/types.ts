@@ -5,6 +5,7 @@ export interface UserProfile {
   photoURL?: string;
   points: number;
   isAdmin?: boolean;
+  isBanned?: boolean;
   legajo?: string;
   gerencia?: string;
   createdAt: string;
@@ -46,4 +47,6 @@ export interface Standing {
   forecastsCount: number;
   exactHitsCount: number;
   outcomeHitsCount: number;
+  legajo?: string;
+  gerencia?: string;
 }

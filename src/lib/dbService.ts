@@ -47,7 +47,13 @@ export const activeConfig = {
   storageBucket: envConfig.storageBucket || firebaseConfig?.storageBucket,
   messagingSenderId: envConfig.messagingSenderId || firebaseConfig?.messagingSenderId,
   appId: envConfig.appId || firebaseConfig?.appId,
-  firestoreDatabaseId: envConfig.firestoreDatabaseId || firebaseConfig?.firestoreDatabaseId,
+  firestoreDatabaseId: envConfig.firestoreDatabaseId 
+    ? envConfig.firestoreDatabaseId 
+    : (
+        (envConfig.projectId && envConfig.projectId !== firebaseConfig?.projectId) 
+          ? undefined 
+          : firebaseConfig?.firestoreDatabaseId
+      ),
 };
 
 // Detect if real Firebase is configured
@@ -141,7 +147,7 @@ const SEED_MATCHES: SoccerMatch[] = [
     id: "match-2",
     homeTeam: "Brasil 🇧🇷",
     awayTeam: "Alemania 🇩🇪",
-    matchDate: new Date(Date.now() + 1000 * 60 * 30).toISOString(), // Starts in 30 mins (locked!)
+    matchDate: new Date(Date.now() + 1000 * 60 * 10).toISOString(), // Starts in 10 mins (locked!)
     status: 'pending',
     createdAt: new Date().toISOString()
   },
@@ -261,9 +267,19 @@ export const dbService = {
             const isBootstrappedAdmin = user.email === 'darigles1@gmail.com';
             
             if (userSnap.exists()) {
+              const data = userSnap.data();
+              const createdAt = data.createdAt instanceof Timestamp 
+                ? data.createdAt.toDate().toISOString() 
+                : (data.createdAt || new Date().toISOString());
+              const updatedAt = data.updatedAt instanceof Timestamp 
+                ? data.updatedAt.toDate().toISOString() 
+                : data.updatedAt;
+
               profile = {
-                ...userSnap.data(),
+                ...data,
                 uid: user.uid,
+                createdAt,
+                updatedAt
               } as UserProfile;
               
               // Ensure backend admin aligns with the boostrapped rule
@@ -272,25 +288,31 @@ export const dbService = {
                 await updateDoc(userDocRef, { isAdmin: true });
               }
             } else {
-              profile = {
+              const createdAtTimestamp = Timestamp.now();
+              const profilePayload = {
                 uid: user.uid,
                 name: user.displayName || user.email?.split('@')[0] || 'Participante',
                 email: user.email || '',
                 photoURL: user.photoURL || undefined,
                 points: 0,
                 isAdmin: isBootstrappedAdmin,
-                createdAt: new Date().toISOString()
+                createdAt: createdAtTimestamp
               };
               
-              await setDoc(userDocRef, profile);
+              await setDoc(userDocRef, profilePayload);
               
               // Register also in admins collection if admin
               if (isBootstrappedAdmin) {
                 await setDoc(doc(db, 'admins', user.uid), {
                   email: user.email,
-                  assignedAt: new Timestamp(Date.now() / 1000, 0)
+                  assignedAt: createdAtTimestamp
                 });
               }
+
+              profile = {
+                ...profilePayload,
+                createdAt: createdAtTimestamp.toDate().toISOString()
+              } as UserProfile;
             }
             callback(profile);
           } catch (err) {
@@ -335,25 +357,45 @@ export const dbService = {
       
       let profile: UserProfile;
       if (userSnap.exists()) {
-        profile = userSnap.data() as UserProfile;
+        const data = userSnap.data();
+        const createdAt = data.createdAt instanceof Timestamp 
+          ? data.createdAt.toDate().toISOString() 
+          : (data.createdAt || new Date().toISOString());
+        const updatedAt = data.updatedAt instanceof Timestamp 
+          ? data.updatedAt.toDate().toISOString() 
+          : data.updatedAt;
+
+        profile = {
+          ...data,
+          uid: user.uid,
+          createdAt,
+          updatedAt
+        } as UserProfile;
+
         if (isBootstrappedAdmin && !profile.isAdmin) {
           profile.isAdmin = true;
           await updateDoc(userDocRef, { isAdmin: true });
         }
       } else {
-        profile = {
+        const createdAtTimestamp = Timestamp.now();
+        const profilePayload = {
           uid: user.uid,
           name: user.displayName || user.email?.split('@')[0] || 'Participante',
           email: user.email || '',
           photoURL: user.photoURL || undefined,
           points: 0,
           isAdmin: isBootstrappedAdmin,
-          createdAt: new Date().toISOString()
+          createdAt: createdAtTimestamp
         };
-        await setDoc(userDocRef, profile);
+        await setDoc(userDocRef, profilePayload);
         if (isBootstrappedAdmin) {
           await setDoc(doc(db, 'admins', user.uid), { email: user.email });
         }
+
+        profile = {
+          ...profilePayload,
+          createdAt: createdAtTimestamp.toDate().toISOString()
+        } as UserProfile;
       }
       return profile;
     } else {
@@ -526,6 +568,13 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
           forecasts.push({
             id: doc.id,
             userId: data.userId,
@@ -535,8 +584,8 @@ export const dbService = {
             homeScore: data.homeScore,
             awayScore: data.awayScore,
             pointsEarned: data.pointsEarned ?? null,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt
+            createdAt,
+            updatedAt
           });
         });
         callback(forecasts);
@@ -563,6 +612,13 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
           forecasts.push({
             id: doc.id,
             userId: data.userId,
@@ -572,8 +628,8 @@ export const dbService = {
             homeScore: data.homeScore,
             awayScore: data.awayScore,
             pointsEarned: data.pointsEarned ?? null,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt
+            createdAt,
+            updatedAt
           });
         });
         callback(forecasts);
@@ -682,51 +738,8 @@ export const dbService = {
           updatedAt: Timestamp.now()
         });
 
-        // 2. Fetch all forecasts for this match
-        const forecastsRef = collection(db, 'forecasts');
-        const q = query(forecastsRef, where('matchId', '==', matchId));
-        const qSnap = await getDocs(q);
-
-        const scoreChanges: { [uid: string]: number } = {};
-
-        // Calculate earned points for each prediction
-        for (const fDoc of qSnap.docs) {
-          const fData = fDoc.data();
-          const pHome = Number(fData.homeScore);
-          const pAway = Number(fData.awayScore);
-
-          let pointsEarned = 0;
-          if (pHome === finalHomeScore && pAway === finalAwayScore) {
-            pointsEarned = 3; // EXACT SCORE MATCH
-          } else {
-            const forecastResult = Math.sign(pHome - pAway);
-            const actualResult = Math.sign(finalHomeScore - finalAwayScore);
-            if (forecastResult === actualResult) {
-              pointsEarned = 1; // CORRECT WINNER
-            }
-          }
-
-          // Update forecast point attribution
-          await updateDoc(doc(db, 'forecasts', fDoc.id), {
-            pointsEarned,
-            updatedAt: Timestamp.now()
-          });
-
-          scoreChanges[fData.userId] = pointsEarned;
-        }
-
-        // 3. Update related cumulative points of users
-        for (const userId of Object.keys(scoreChanges)) {
-          const userRef = doc(db, 'users', userId);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const currentPoints = userSnap.data().points || 0;
-            await updateDoc(userRef, {
-              points: currentPoints + scoreChanges[userId],
-              updatedAt: Timestamp.now()
-            });
-          }
-        }
+        // 2. Perform a complete, robust recalculation of ALL forecasts and ALL users from scratch!
+        await this.syncUserForecastsAndPoints();
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `settle/${matchId}`);
         throw err;
@@ -743,51 +756,43 @@ export const dbService = {
         setLocalData('matches', matches);
       }
 
-      const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
-      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      // Perform complete recalculation cleanly
+      await this.syncUserForecastsAndPoints();
+    }
+  },
 
-      forecasts.forEach(f => {
-        if (f.matchId === matchId) {
-          const pHome = Number(f.homeScore);
-          const pAway = Number(f.awayScore);
+  async unsettleMatch(matchId: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        // 1. Reset match status and scores
+        const matchRef = doc(db, 'matches', matchId);
+        await updateDoc(matchRef, {
+          homeScore: null,
+          awayScore: null,
+          status: 'pending',
+          updatedAt: Timestamp.now()
+        });
 
-          let pointsEarned = 0;
-          if (pHome === finalHomeScore && pAway === finalAwayScore) {
-            pointsEarned = 3;
-          } else {
-            const forecastResult = Math.sign(pHome - pAway);
-            const actualResult = Math.sign(finalHomeScore - finalAwayScore);
-            if (forecastResult === actualResult) {
-              pointsEarned = 1;
-            }
-          }
-
-          f.pointsEarned = pointsEarned;
-          f.updatedAt = new Date().toISOString();
-
-          // Award to users array
-          const uIdx = users.findIndex(u => u.uid === f.userId);
-          if (uIdx > -1) {
-            users[uIdx].points = (users[uIdx].points || 0) + pointsEarned;
-            users[uIdx].updatedAt = new Date().toISOString();
-          }
-        }
-      });
-
-      setLocalData('forecasts', forecasts);
-      setLocalData('users', users);
-      
-      // Update session if currently logged in
-      const currentUser = localStorage.getItem('prode_current_user');
-      if (currentUser) {
-        const parsed = JSON.parse(currentUser);
-        const updatedUser = users.find(u => u.uid === parsed.uid);
-        if (updatedUser) {
-          localStorage.setItem('prode_current_user', JSON.stringify(updatedUser));
-        }
+        // 2. Perform a complete, robust recalculation of ALL forecasts and ALL users from scratch!
+        await this.syncUserForecastsAndPoints();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `unsettle/${matchId}`);
+        throw err;
+      }
+    } else {
+      // Local Storage simulation
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      const mIdx = matches.findIndex(m => m.id === matchId);
+      if (mIdx > -1) {
+        matches[mIdx].homeScore = null;
+        matches[mIdx].awayScore = null;
+        matches[mIdx].status = 'pending';
+        matches[mIdx].updatedAt = new Date().toISOString();
+        setLocalData('matches', matches);
       }
 
-      window.dispatchEvent(new Event('prode_db_updated'));
+      // Perform complete recalculation cleanly
+      await this.syncUserForecastsAndPoints();
     }
   },
 
@@ -800,12 +805,38 @@ export const dbService = {
         onSnapshot(collection(db, 'forecasts'), (forecastsSnapshot) => {
           const users: UserProfile[] = [];
           usersSnapshot.forEach(doc => {
-            users.push({ ...doc.data() as UserProfile, uid: doc.id });
+            const data = doc.data();
+            const createdAt = data.createdAt instanceof Timestamp 
+              ? data.createdAt.toDate().toISOString() 
+              : (data.createdAt || new Date().toISOString());
+            const updatedAt = data.updatedAt instanceof Timestamp 
+              ? data.updatedAt.toDate().toISOString() 
+              : data.updatedAt;
+
+            users.push({ 
+              ...data, 
+              createdAt,
+              updatedAt,
+              uid: doc.id 
+            } as UserProfile);
           });
 
           const forecasts: UserForecast[] = [];
           forecastsSnapshot.forEach(doc => {
-            forecasts.push(doc.data() as UserForecast);
+            const data = doc.data();
+            const createdAt = data.createdAt instanceof Timestamp 
+              ? data.createdAt.toDate().toISOString() 
+              : (data.createdAt || new Date().toISOString());
+            const updatedAt = data.updatedAt instanceof Timestamp 
+              ? data.updatedAt.toDate().toISOString() 
+              : data.updatedAt;
+
+            forecasts.push({
+              ...data,
+              createdAt,
+              updatedAt,
+              id: doc.id
+            } as UserForecast);
           });
 
           const standings = computeStandings(users, forecasts);
@@ -832,13 +863,25 @@ export const dbService = {
     }
   },
 
-  // --- ADMIN USER MANAGEMENT ---
   subscribeUsers(callback: (users: UserProfile[]) => void) {
     if (isFirebaseActive && db) {
       return onSnapshot(collection(db, 'users'), (snapshot) => {
         const users: UserProfile[] = [];
-        snapshot.forEach((doc) => {
-          users.push({ ...doc.data() as UserProfile, uid: doc.id });
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
+          users.push({ 
+            ...data, 
+            createdAt,
+            updatedAt,
+            uid: doc.id 
+          } as UserProfile);
         });
         callback(users);
       }, (error) => {
@@ -847,7 +890,6 @@ export const dbService = {
     } else {
       const users = getLocalData<UserProfile>('users', SEED_USERS);
       callback(users);
-
       const listener = () => {
         callback(getLocalData<UserProfile>('users', SEED_USERS));
       };
@@ -856,81 +898,224 @@ export const dbService = {
     }
   },
 
-  async deleteUser(userId: string): Promise<void> {
+  async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
     if (isFirebaseActive && db) {
-      try {
-        await deleteDoc(doc(db, 'users', userId));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `users/${userId}`);
-        throw err;
-      }
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
     } else {
       const users = getLocalData<UserProfile>('users', SEED_USERS);
-      setLocalData('users', users.filter(u => u.uid !== userId));
+      const idx = users.findIndex(u => u.uid === userId);
+      if (idx !== -1) {
+        users[idx] = {
+          ...users[idx],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+        setLocalData('users', users);
+        
+        // Update current user locally if it's the current user
+        const currentUserStr = localStorage.getItem('prode_current_user');
+        if (currentUserStr) {
+          const parsed = JSON.parse(currentUserStr);
+          if (parsed.uid === userId) {
+            localStorage.setItem('prode_current_user', JSON.stringify({
+              ...parsed,
+              ...updates,
+              updatedAt: new Date().toISOString()
+            }));
+          }
+        }
+        
+        window.dispatchEvent(new Event('prode_db_updated'));
+      }
+    }
+  },
+
+  async toggleAdminStatus(userId: string, targetStatus: boolean, email?: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        isAdmin: targetStatus,
+        updatedAt: Timestamp.now()
+      });
+    } else {
+      await this.updateUserProfile(userId, { isAdmin: targetStatus });
+    }
+  },
+
+  async deleteUser(userId: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      const userRef = doc(db, 'users', userId);
+      await deleteDoc(userRef);
+    } else {
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      const updated = users.filter(u => u.uid !== userId);
+      setLocalData('users', updated);
       window.dispatchEvent(new Event('prode_db_updated'));
     }
   },
 
-  async toggleAdminStatus(userId: string, newIsAdmin: boolean, userEmail: string): Promise<void> {
-    if (isFirebaseActive && db) {
-      try {
-        // Update user doc
-        await updateDoc(doc(db, 'users', userId), { isAdmin: newIsAdmin });
-        
-        // Update admins collection
-        if (newIsAdmin) {
-          await setDoc(doc(db, 'admins', userId), { email: userEmail, assignedAt: Timestamp.now() });
-        } else {
-          await deleteDoc(doc(db, 'admins', userId));
-        }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
-        throw err;
-      }
-    } else {
-      const users = getLocalData<UserProfile>('users', SEED_USERS);
-      const idx = users.findIndex(u => u.uid === userId);
-      if (idx > -1) {
-        users[idx].isAdmin = newIsAdmin;
-        setLocalData('users', users);
-        window.dispatchEvent(new Event('prode_db_updated'));
-      }
-    }
-  },
-
-  async updateUserCorporateData(userId: string, legajo: string, gerencia: string): Promise<void> {
-    if (isFirebaseActive && db) {
-      try {
-        await updateDoc(doc(db, 'users', userId), { 
-          legajo, 
-          gerencia,
-          updatedAt: Timestamp.now()
+  async syncUserForecastsAndPoints(): Promise<{ success: boolean; message: string }> {
+    try {
+      if (isFirebaseActive && db) {
+        // 1. Fetch all matches
+        const matchesRef = collection(db, 'matches');
+        const matchesSnap = await getDocs(matchesRef);
+        const matchesMap: { [id: string]: any } = {};
+        matchesSnap.forEach(doc => {
+          matchesMap[doc.id] = doc.data();
         });
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
-        throw err;
-      }
-    } else {
-      const users = getLocalData<UserProfile>('users', SEED_USERS);
-      const idx = users.findIndex(u => u.uid === userId);
-      if (idx > -1) {
-        users[idx].legajo = legajo;
-        users[idx].gerencia = gerencia;
-        users[idx].updatedAt = new Date().toISOString();
-        setLocalData('users', users);
+
+        // 2. Fetch all forecasts
+        const forecastsRef = collection(db, 'forecasts');
+        const forecastsSnap = await getDocs(forecastsRef);
+        const userForecasts: { [userId: string]: any[] } = {};
         
-        // Update local session cache if it's the current user
-        const currentUserStr = localStorage.getItem('prode_current_user');
-        if (currentUserStr) {
-          const cu = JSON.parse(currentUserStr);
-          if (cu.uid === userId) {
-            cu.legajo = legajo;
-            cu.gerencia = gerencia;
-            localStorage.setItem('prode_current_user', JSON.stringify(cu));
+        // Update individual forecast points if the match is finished but the forecast wasn't scored correctly
+        for (const fDoc of forecastsSnap.docs) {
+          const fData = fDoc.data();
+          const match = matchesMap[fData.matchId];
+          const userId = fData.userId;
+          
+          if (!userId) continue;
+
+          if (!userForecasts[userId]) {
+            userForecasts[userId] = [];
+          }
+
+          let pointsEarned = fData.pointsEarned ?? null;
+
+          if (match && match.status === 'finished') {
+            const finalHome = Number(match.homeScore);
+            const finalAway = Number(match.awayScore);
+            const pHome = Number(fData.homeScore);
+            const pAway = Number(fData.awayScore);
+
+            let calculatedPoints = 0;
+            if (pHome === finalHome && pAway === finalAway) {
+              calculatedPoints = 3;
+            } else {
+              const forecastResult = Math.sign(pHome - pAway);
+              const actualResult = Math.sign(finalHome - finalAway);
+              if (forecastResult === actualResult) {
+                calculatedPoints = 1;
+              }
+            }
+
+            if (pointsEarned !== calculatedPoints) {
+              pointsEarned = calculatedPoints;
+              // Update in Firestore
+              await updateDoc(doc(db, 'forecasts', fDoc.id), {
+                pointsEarned,
+                updatedAt: Timestamp.now()
+              });
+            }
+          } else {
+            if (pointsEarned !== null) {
+              pointsEarned = null;
+              await updateDoc(doc(db, 'forecasts', fDoc.id), {
+                pointsEarned: null,
+                updatedAt: Timestamp.now()
+              });
+            }
+          }
+
+          userForecasts[userId].push({
+            ...fData,
+            pointsEarned
+          });
+        }
+
+        // 3. For each user, sum points and update their profile
+        const usersRef = collection(db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        
+        for (const uDoc of usersSnap.docs) {
+          const userId = uDoc.id;
+          const forecasts = userForecasts[userId] || [];
+          
+          let totalPoints = 0;
+          forecasts.forEach(f => {
+            if (f.pointsEarned !== null && f.pointsEarned !== undefined) {
+              totalPoints += f.pointsEarned;
+            }
+          });
+
+          // Update user points in database
+          await updateDoc(doc(db, 'users', userId), {
+            points: totalPoints,
+            updatedAt: Timestamp.now()
+          });
+        }
+      } else {
+        // Localstorage offline sync
+        const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+        const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
+        const users = getLocalData<UserProfile>('users', SEED_USERS);
+
+        // Recalculate each forecast points based on finished matches
+        forecasts.forEach(f => {
+          const match = matches.find(m => m.id === f.matchId);
+          if (match && match.status === 'finished') {
+            const finalHome = Number(match.homeScore);
+            const finalAway = Number(match.awayScore);
+            const pHome = Number(f.homeScore);
+            const pAway = Number(f.awayScore);
+
+            if (pHome === finalHome && pAway === finalAway) {
+              f.pointsEarned = 3;
+            } else {
+              const forecastResult = Math.sign(pHome - pAway);
+              const actualResult = Math.sign(finalHome - finalAway);
+              if (forecastResult === actualResult) {
+                f.pointsEarned = 1;
+              } else {
+                f.pointsEarned = 0;
+              }
+            }
+          } else {
+            f.pointsEarned = null;
+          }
+        });
+
+        localStorage.setItem('prode_forecasts', JSON.stringify(forecasts));
+
+        // Recalculate each user points
+        users.forEach(u => {
+          const userForecasts = forecasts.filter(f => f.userId === u.uid);
+          let totalPoints = 0;
+          userForecasts.forEach(f => {
+            if (f.pointsEarned !== null && f.pointsEarned !== undefined) {
+              totalPoints += f.pointsEarned;
+            }
+          });
+          u.points = totalPoints;
+          u.updatedAt = new Date().toISOString();
+        });
+
+        localStorage.setItem('prode_users', JSON.stringify(users));
+        
+        // Update session if currently logged in
+        const currentUser = localStorage.getItem('prode_current_user');
+        if (currentUser) {
+          const parsed = JSON.parse(currentUser);
+          const updatedUser = users.find(u => u.uid === parsed.uid);
+          if (updatedUser) {
+            localStorage.setItem('prode_current_user', JSON.stringify(updatedUser));
           }
         }
-        window.dispatchEvent(new Event('prode_db_updated'));
       }
+
+      // Record sync timestamp in localStorage
+      localStorage.setItem('prode_last_daily_sync', new Date().toISOString());
+      window.dispatchEvent(new Event('prode_db_updated'));
+      return { success: true, message: 'La sincronización de pronósticos se realizó correctamente.' };
+    } catch (err) {
+      console.error('Error syncing user forecasts & points:', err);
+      return { success: false, message: 'Ocurrió un error al intentar sincronizar.' };
     }
   }
 };
@@ -939,7 +1124,10 @@ export const dbService = {
 function computeStandings(users: UserProfile[], forecasts: UserForecast[]): Standing[] {
   const standingsMap: { [userId: string]: Standing } = {};
 
-  users.forEach(u => {
+  // Filter out banned users from participating in rankings/standings blocks
+  const activeUsers = users.filter(u => !u.isBanned);
+
+  activeUsers.forEach(u => {
     standingsMap[u.uid] = {
       position: 0,
       userId: u.uid,
@@ -949,7 +1137,9 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[]): Stan
       points: u.points || 0,
       forecastsCount: 0,
       exactHitsCount: 0,
-      outcomeHitsCount: 0
+      outcomeHitsCount: 0,
+      legajo: u.legajo,
+      gerencia: u.gerencia
     };
   });
 

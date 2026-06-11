@@ -207,7 +207,8 @@ Kit de aliento:
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[11px] font-semibold uppercase tracking-wider border-b border-slate-100">
                   <th className="py-3.5 px-5 text-center w-16">Pos</th>
-                  <th className="py-3.5 px-3">Participante</th>
+                  <th className="py-3.5 px-3 animate-fadeIn">Participante</th>
+                  <th className="py-3.5 px-3 hidden md:table-cell">Legajo / Gerencia</th>
                   <th className="py-3.5 px-3 text-center">Puntos</th>
 
                   <th className="py-3.5 px-3 text-center hidden sm:table-cell">Resultado Exacto (+3)</th>
@@ -235,7 +236,7 @@ Kit de aliento:
                       </td>
 
                       {/* Participant Cell */}
-                      <td className="py-4 px-3">
+                      <td className="py-4 px-3 text-left">
                         <div className="flex items-center space-x-3">
                           {row.photoURL ? (
                             <img src={row.photoURL} alt={row.userName} className="h-8 w-8 rounded-full border" />
@@ -245,7 +246,7 @@ Kit de aliento:
                             </div>
                           )}
                           <div>
-                            <div className="flex items-center space-x-1.5">
+                            <div className="flex items-center space-x-1.5 text-left justify-start">
                               <span className="text-slate-900 font-semibold">{row.userName}</span>
                               {isCurrent && (
                                 <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
@@ -253,19 +254,50 @@ Kit de aliento:
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-slate-400 font-mono">{row.userEmail}</span>
+                            <div className="text-left flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                              <span className="text-xs text-slate-400 font-mono">{row.userEmail}</span>
+                              {/* Mobile/Compact badges fallback */}
+                              <div className="flex flex-wrap gap-1 mt-1 sm:mt-0 md:hidden">
+                                {row.legajo && (
+                                  <span className="bg-slate-100 text-slate-600 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-slate-200/50">
+                                    Legajo: #{row.legajo}
+                                  </span>
+                                )}
+                                {row.gerencia && (
+                                  <span className="bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100">
+                                    {row.gerencia}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Legajo / Gerencia dedicated column */}
+                      <td className="py-4 px-3 hidden md:table-cell text-left">
+                        <div className="flex flex-col space-y-1">
+                          {row.legajo ? (
+                            <span className="text-xs font-extrabold text-slate-800 bg-slate-100/80 border border-slate-200 px-2 py-0.5 rounded-md w-fit font-mono">
+                              Legajo #{row.legajo}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Legajo sin cargar</span>
+                          )}
+                          {row.gerencia && (
+                            <span className="text-[9.5px] font-bold text-blue-700 bg-blue-50/70 border border-blue-100 px-2 py-0.5 rounded-md w-fit uppercase tracking-wide">
+                              {row.gerencia}
+                            </span>
+                          )}
                         </div>
                       </td>
 
                       {/* Points Cell */}
                       <td className="py-4 px-3 text-center">
-                        <span className="text-sm font-extrabold text-slate-900 bg-slate-105 bg-slate-100 px-2.5 py-1 rounded-full font-mono">
+                        <span className="text-sm font-extrabold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full font-mono">
                           {row.points}
                         </span>
                       </td>
-
-
 
                       {/* Exact Hits Cell */}
                       <td className="py-4 px-3 text-center hidden sm:table-cell">
@@ -307,7 +339,7 @@ Kit de aliento:
             <li><strong>Resultado exacto (3 puntos):</strong> Acertar el marcador exacto de ambos equipos (ej. si termina 2-1 y tu pronóstico fue 2-1).</li>
             <li><strong>Ganador o Empate (1 punto):</strong> Acertar cuál equipo gana (o si empatan) pero errar la cantidad exacta de goles.</li>
             <li><strong>Errado (0 puntos):</strong> Si no se concreta ninguna de las condiciones anteriores.</li>
-            <li><strong>Cierre de Carga:</strong> Se permite cargar o editar tu pronóstico libremente hasta **1 hora antes** de la hora estipulada de kickoff.</li>
+            <li><strong>Cierre de Carga:</strong> Se permite cargar o editar tu pronóstico libremente hasta **5 minutos antes** de la hora estipulada de kickoff.</li>
           </ul>
         </div>
       </div>

@@ -5,13 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Trophy,
-  Calendar,
-  Settings,
-  LogIn,
-  UserPlus,
-  ShieldAlert,
+import { 
+  Trophy, 
+  Calendar, 
+  Settings, 
+  LogIn, 
+  UserPlus, 
+  ShieldAlert, 
   AlertTriangle,
   Info,
   Grid,
@@ -40,6 +40,7 @@ export default function App() {
   const [forecasts, setForecasts] = useState<UserForecast[]>([]);
   const [allForecasts, setAllForecasts] = useState<UserForecast[]>([]);
   const [standings, setStandings] = useState<Standing[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
 
  const [prizes, setPrizes] = useState<{ first: string; second: string; third: string }>(() => {
   const stored = localStorage.getItem('prode_prizes');
@@ -62,12 +63,22 @@ export default function App() {
     };
   });
 
-
-
   const handleUpdatePrizes = (newPrizes: { first: string; second: string; third: string }) => {
     setPrizes(newPrizes);
     localStorage.setItem('prode_prizes', JSON.stringify(newPrizes));
     window.dispatchEvent(new Event('prode_db_updated'));
+  };
+
+  const handleUpdateUser = async (userId: string, updates: Partial<UserProfile>) => {
+    try {
+      await dbService.updateUserProfile(userId, updates);
+      // If we are updating the logged in user, apply state update
+      if (currentUser && currentUser.uid === userId) {
+        setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+      }
+    } catch (e) {
+      console.error("Error setting user profile details:", e);
+    }
   };
 
   // Page Controls
@@ -78,39 +89,62 @@ export default function App() {
   const [customName, setCustomName] = useState('');
   const [customEmail, setCustomEmail] = useState('');
   const [landingErr, setLandingErr] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Onboarding Modal States
-  const [onboardLegajo, setOnboardLegajo] = useState('');
-  const [onboardGerencia, setOnboardGerencia] = useState('');
-  const [onboardLoading, setOnboardLoading] = useState(false);
-  const [onboardErr, setOnboardErr] = useState('');
-
-  const showOnboarding = currentUser && (!currentUser.legajo || !currentUser.gerencia);
-
-  const handleSaveOnboarding = async () => {
-    if (!onboardLegajo.trim() || !onboardGerencia.trim()) {
-      setOnboardErr('Ambos campos son obligatorios para continuar.');
-      return;
-    }
-    setOnboardLoading(true);
-    setOnboardErr('');
-    try {
-      await dbService.updateUserCorporateData(currentUser!.uid, onboardLegajo.trim(), onboardGerencia.trim());
-      setCurrentUser({ ...currentUser!, legajo: onboardLegajo.trim(), gerencia: onboardGerencia.trim() });
-    } catch (err) {
-      setOnboardErr('Error al guardar los datos. Intentá de nuevo.');
-    } finally {
-      setOnboardLoading(false);
-    }
-  };
-
-  // 1. Initial Subscriptions setup
+  // 1. Initial Auth status subscription setup
   useEffect(() => {
     // Auth Listener
     const unsubAuth = dbService.onAuthChange((profile) => {
       setCurrentUser(profile);
       setLoadingAuth(false);
     });
+
+    return () => {
+      unsubAuth();
+    };
+  }, []);
+
+  // Automatic Daily sync if needed (once every 24 hours)
+  useEffect(() => {
+    const runDailySyncIfNeeded = async () => {
+      if (!currentUser) return;
+      
+      const lastSyncStr = localStorage.getItem('prode_last_daily_sync');
+      let shouldSync = false;
+      if (!lastSyncStr) {
+        shouldSync = true;
+      } else {
+        const lastSync = new Date(lastSyncStr).getTime();
+        const diff = Date.now() - lastSync;
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        if (diff >= oneDayMs) {
+          shouldSync = true;
+        }
+      }
+
+      if (shouldSync) {
+        console.log("Ejecutando sincronización automática de pronósticos y puntos diario...");
+        try {
+          await dbService.syncUserForecastsAndPoints();
+        } catch (e) {
+          console.error("Error during automatic sync:", e);
+        }
+      }
+    };
+
+    runDailySyncIfNeeded();
+  }, [currentUser]);
+
+  // 2. Data subscriptions triggered by Active User profile changes
+  useEffect(() => {
+    if (!currentUser) {
+      setMatches([]);
+      setStandings([]);
+      setAllForecasts([]);
+      setForecasts([]);
+      setUsers([]);
+      return;
+    }
 
     // Matches List Subscription
     const unsubMatches = dbService.subscribeMatches((data) => {
@@ -127,37 +161,49 @@ export default function App() {
       setAllForecasts(data);
     });
 
-    return () => {
-      unsubAuth();
-      unsubMatches();
-      unsubStandings();
-      unsubAllForecasts();
-    };
-  }, []);
-
-  // 2. Personal Forecasts subscription triggered by Active User profile changes
-  useEffect(() => {
-    if (!currentUser) {
-      setForecasts([]);
-      return;
-    }
-
+    // Personal Forecasts subscription
     const unsubForecasts = dbService.subscribeUserForecasts(currentUser.uid, (data) => {
       setForecasts(data);
     });
 
+    // All User Profiles subscription (to display/restrict legajo lists and manage suspensions)
+    const unsubUsers = dbService.subscribeUsers((data) => {
+      setUsers(data);
+    });
+
     return () => {
+      unsubMatches();
+      unsubStandings();
+      unsubAllForecasts();
       unsubForecasts();
+      unsubUsers();
     };
   }, [currentUser]);
 
   // Handle Logins
   const handleGoogleLogin = async () => {
     try {
+      setAuthError(null);
       setLoadingAuth(true);
       await dbService.loginWithGoogle();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login failure:", err);
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('auth/unauthorized-domain') || errMsg.includes('unauthorized-domain')) {
+        setAuthError(
+          'Error de dominio no autorizado (auth/unauthorized-domain). Tu dominio de Vercel no está autorizado en Google Firebase para iniciar sesión con Google.\n\nPara solucionarlo en 1 minuto:\n1. Entrá a la consola de Firebase: https://console.firebase.google.com/\n2. Seleccioná el proyecto "friendly-forest-6hh41"\n3. Clickeá en "Authentication" (menú izquierdo) y luego en la pestaña "Settings" (Configuración, arriba).\n4. Desplazate a "Authorized domains" (Dominios autorizados) y clickeá "Add domain" (Agregar dominio).\n5. Escribí el dominio de tu sitio de Vercel (por ejemplo, prode-corporativo.vercel.app, sin "https://" ni barras) y guardalo.\n6. ¡Listo! Recargá tu sitio de Vercel e intentá de nuevo.'
+        );
+      } else if (errMsg.includes('auth/popup-blocked') || errMsg.includes('popup-blocked')) {
+        setAuthError(
+          '¡Ventana emergente bloqueada! Tu navegador impidió abrir la pantalla de Google. Por favor, permití ventanas emergentes para este sitio e intentá de nuevo.'
+        );
+      } else if (errMsg.includes('auth/popup-closed-by-user') || errMsg.includes('popup-closed-by-user')) {
+        setAuthError(
+          'El inicio de sesión fue cancelado porque la ventana emergente de Google se cerró antes de completar el registro.'
+        );
+      } else {
+        setAuthError(`Falló el inicio de sesión: ${errMsg}`);
+      }
     } finally {
       setLoadingAuth(false);
     }
@@ -190,7 +236,7 @@ export default function App() {
       setLandingErr('Formato de correo inválido');
       return;
     }
-
+    
     setLandingErr('');
     try {
       const u = await dbService.createMockUser(customName.trim(), customEmail.toLowerCase().trim());
@@ -207,6 +253,10 @@ export default function App() {
 
   const handleSettleMatch = async (matchId: string, homeScore: number, awayScore: number) => {
     return dbService.settleMatch(matchId, homeScore, awayScore);
+  };
+
+  const handleUnsettleMatch = async (matchId: string) => {
+    return dbService.unsettleMatch(matchId);
   };
 
   const handleLoadOfficialFixture = async () => {
@@ -240,13 +290,13 @@ export default function App() {
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-
+      
       {/* 1. Header Navigation HUD */}
-      <Header
-        user={currentUser}
+      <Header 
+        user={currentUser} 
         logo={currentUser ? doradoLogo : bancoLogo}
-        isFirebaseActive={isFirebaseActive}
-        onLogout={handleLogout}
+        isFirebaseActive={isFirebaseActive} 
+        onLogout={handleLogout} 
         onLogin={handleGoogleLogin}
         standings={standings}
       />
@@ -254,10 +304,10 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <AnimatePresence mode="wait">
           {loadingAuth ? (
-            <motion.div
-              key="auth-loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+            <motion.div 
+              key="auth-loading" 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center p-16 space-y-4 text-center flex-1 h-[60vh]"
             >
@@ -266,7 +316,7 @@ export default function App() {
             </motion.div>
           ) : !currentUser ? (
             // 2. Unauthenticated Cover/Landing View
-            <motion.div
+            <motion.div 
               key="landing-auth"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -278,18 +328,18 @@ export default function App() {
                 <div className="absolute top-4 right-4 bg-yellow-500/25 border border-yellow-500/20 px-3 py-1 rounded-full text-[10px] font-mono text-yellow-300 animate-pulse">
                   {isFirebaseActive ? 'Servidor Conectado' : 'Modo Simulador'}
                 </div>
-
+                
                 {/* Brand Corporate Logo */}
                 <div className="flex justify-center mb-6">
-                  <motion.div
+                  <motion.div 
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                     className="bg-white p-5 rounded-3xl shadow-2xl shadow-slate-950/50 border border-slate-700/20 flex items-center justify-center"
                   >
-                    <img
-                      src={bancoLogo}
-                      alt="BanCo - El Banco de Corrientes"
+                    <img 
+                      src={bancoLogo} 
+                      alt="BanCo - El Banco de Corrientes" 
                       className="h-28 md:h-36 w-auto object-contain"
                       referrerPolicy="no-referrer"
                     />
@@ -317,6 +367,20 @@ export default function App() {
                     <p className="text-[11px] text-slate-400">
                       Usa tu cuenta de Google para registrar tus predicciones de forma segura.
                     </p>
+
+                    {authError && (
+                      <div className="bg-rose-50 border border-rose-200/60 p-4 rounded-xl text-xs text-rose-850 text-left space-y-2 mt-4 shadow-sm">
+                        <div className="flex items-start space-x-2">
+                          <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-rose-950 text-sm block">Error de Autenticación</span>
+                            <p className="mt-1 leading-relaxed text-rose-800 font-medium whitespace-pre-line">
+                              {authError}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   // Local Simulated Auth Flow
@@ -401,9 +465,39 @@ export default function App() {
                 )}
               </div>
             </motion.div>
+          ) : currentUser.isBanned ? (
+            // Banned / Suspended account view
+            <motion.div 
+              key="auth-banned"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="max-w-xl mx-auto my-12 bg-white border border-rose-200 rounded-3xl overflow-hidden shadow-xl text-left"
+            >
+              <div className="bg-gradient-to-br from-rose-950 via-rose-905 to-red-900 p-8 text-center text-white">
+                <div className="inline-flex p-3 bg-red-500/20 border border-red-500/30 rounded-2xl mb-3 animate-pulse">
+                  <ShieldAlert className="h-8 w-8 text-rose-400" />
+                </div>
+                <h2 className="text-xl font-black tracking-tight text-white">
+                  Acceso Suspendido Administrativamente
+                </h2>
+                <p className="text-xs text-rose-200 mt-1">
+                  Tu ficha de usuario ha sido suspendida para resguardar las reglas de competencia del Prode
+                </p>
+              </div>
+              <div className="p-6 md:p-8 space-y-5">
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-xs text-rose-900 leading-relaxed">
+                  <span className="font-extrabold block mb-1">⚠️ Aviso Importante:</span>
+                  Estimado/a <strong>{currentUser.name}</strong>, el panel de auditoría de BanCo Corrientes ha restringido de manera temporal o definitiva tu participación. No podrás registrar nuevos pronósticos, ver marcadores, ni cobrar/reclamar premios oficiales adheridos a las bases.
+                </div>
+                <p className="text-xs text-slate-500 text-center leading-relaxed">
+                  Si considerás que esto se trata de un error o necesitás más aclaraciones, por favor ponte en contacto directo con tu respectiva <strong>Gerencia de Área</strong> o con la Dirección de Recursos Humanos de la institución.
+                </p>
+              </div>
+            </motion.div>
           ) : (
             // 3. Authenticated App Home View
-            <motion.div
+            <motion.div 
               key="auth-home"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -412,96 +506,189 @@ export default function App() {
             >
               {/* Optional Local Profile switcher widget at the top */}
               {!isFirebaseActive && (
-                <ProfileSelector
-                  currentUser={currentUser}
-                  onSelectUser={handleSelectSimulatedProfile}
+                <ProfileSelector 
+                  currentUser={currentUser} 
+                  onSelectUser={handleSelectSimulatedProfile} 
                   onCreateUser={handleCreateSimulatedProfile}
                 />
+              )}
+
+              {/* Profile complete alert warning panel (Legajo y Gerencia) */}
+              {currentUser && (!currentUser.legajo || !currentUser.gerencia) && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl p-6 shadow-sm text-left relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                    <Trophy className="h-40 w-40 text-blue-900" />
+                  </div>
+                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center space-x-2 text-blue-900 font-extrabold text-sm">
+                        <span className="bg-blue-600 text-white rounded-full p-1 leading-none shrink-0 text-[10px]">⚠️</span>
+                        <span>¡Completá tus datos para calificar a los Premios oficiales!</span>
+                      </div>
+                      <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                        Para tener derecho a reclamar los premios oficiales es obligatorio registrar tu Número de Legajo y Gerencia del Banco de Corrientes.
+                      </p>
+                      
+                      {/* Inline compact inputs */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3.5 mt-4">
+                        <div className="flex-1 max-w-xs text-left">
+                          <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Número de Legajo</label>
+                          <input 
+                            type="text"
+                            placeholder="Ej. 10452"
+                            id="profile-input-legajo"
+                            defaultValue={currentUser.legajo || ''}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        
+                        <div className="flex-1 max-w-xs text-left">
+                          <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1">Gerencia / Sucursal</label>
+                          <input 
+                            type="text"
+                            placeholder="Ej. Gerencia de Sistemas"
+                            id="profile-input-gerencia"
+                            defaultValue={currentUser.gerencia || ''}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const legajoEl = document.getElementById('profile-input-legajo') as HTMLInputElement;
+                            const gerenciaEl = document.getElementById('profile-input-gerencia') as HTMLInputElement;
+                            const legajo = legajoEl?.value.trim() || '';
+                            const gerencia = gerenciaEl?.value.trim() || '';
+                            if (legajo && gerencia) {
+                              await dbService.updateUserProfile(currentUser.uid, { legajo, gerencia });
+                              setCurrentUser(prev => prev ? { ...prev, legajo, gerencia } : null);
+                            }
+                          }}
+                          className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
+                        >
+                          Guardar Datos
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Compact Active User Profile Metadata display & update */}
+              {currentUser && currentUser.legajo && currentUser.gerencia && (
+                <div className="bg-slate-100 border border-slate-200 rounded-2xl p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left text-xs">
+                  <div className="flex flex-wrap items-center gap-2 text-slate-600">
+                    <span className="font-bold text-slate-700">Mi Ficha de Empleado:</span>
+                    <span className="bg-white border text-slate-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md">
+                      Legajo: #{currentUser.legajo}
+                    </span>
+                    <span className="bg-white border text-slate-700 text-[10px] font-bold px-2.5 py-0.5 rounded-md">
+                      Sector: {currentUser.gerencia}
+                    </span>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Trigger re-edit by temporarily clearing states locally so the input card renders
+                      setCurrentUser(prev => prev ? { ...prev, legajo: undefined, gerencia: undefined } : null);
+                    }}
+                    className="text-blue-700 hover:text-blue-800 font-extrabold text-[11px] flex items-center gap-1 cursor-pointer select-none"
+                  >
+                    ✏️ Modificar mis datos de legajo
+                  </button>
+                </div>
               )}
 
               {/* View/Tab selector bar */}
               <div className="flex border-b border-slate-200">
                 <button
                   onClick={() => setActiveTab('matches')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'matches'
-                    ? 'text-blue-900 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'matches' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   <Calendar className="h-4 w-4" />
                   <span>Fixture y Pronósticos</span>
                   {activeTab === 'matches' && (
-                    <motion.div
-                      layoutId="active-tab-line"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('fixture-completo')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'fixture-completo'
-                    ? 'text-blue-900 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'fixture-completo' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   <Calendar className="h-4 w-4 text-emerald-600" />
                   <span>Fixture Completo 🗓️</span>
                   {activeTab === 'fixture-completo' && (
-                    <motion.div
-                      layoutId="active-tab-line"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('standings')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'standings'
-                    ? 'text-blue-900 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'standings' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   <Trophy className="h-4 w-4" />
                   <span>Tabla de Posiciones</span>
                   {activeTab === 'standings' && (
-                    <motion.div
-                      layoutId="active-tab-line"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('prode-general')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prode-general'
-                    ? 'text-blue-900 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'prode-general' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   <Grid className="h-4 w-4" />
                   <span>Prode General</span>
                   {activeTab === 'prode-general' && (
-                    <motion.div
-                      layoutId="active-tab-line"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
                     />
                   )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('prizes')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'prizes'
-                    ? 'text-blue-900 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'prizes' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   <Award className="h-4 w-4 text-amber-500" />
                   <span>Premios del Podio</span>
                   {activeTab === 'prizes' && (
-                    <motion.div
-                      layoutId="active-tab-line"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
                     />
                   )}
                 </button>
@@ -509,17 +696,18 @@ export default function App() {
                 {isUserAdmin && (
                   <button
                     onClick={() => setActiveTab('admin')}
-                    className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${activeTab === 'admin'
-                      ? 'text-yellow-600 font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
-                      }`}
+                    className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                      activeTab === 'admin' 
+                        ? 'text-yellow-600 font-extrabold' 
+                        : 'text-slate-400 hover:text-slate-700'
+                    }`}
                   >
                     <Settings className="h-4 w-4" />
                     <span>Panel de Control (Admin)</span>
                     {activeTab === 'admin' && (
-                      <motion.div
-                        layoutId="active-tab-line"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500"
+                      <motion.div 
+                        layoutId="active-tab-line" 
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" 
                       />
                     )}
                   </button>
@@ -529,11 +717,11 @@ export default function App() {
               {/* Active Tab rendering */}
               <div className="pt-2">
                 {activeTab === 'matches' && (
-                  <MatchesList
-                    matches={matches}
-                    forecasts={forecasts}
+                  <MatchesList 
+                    matches={matches} 
+                    forecasts={forecasts} 
                     allForecasts={allForecasts}
-                    onSaveForecast={handleSaveForecast}
+                    onSaveForecast={handleSaveForecast} 
                     userId={currentUser.uid}
                     isUserAdmin={isUserAdmin}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
@@ -541,15 +729,15 @@ export default function App() {
                 )}
 
                 {activeTab === 'fixture-completo' && (
-                  <FixtureCompleto
+                  <FixtureCompleto 
                     matches={matches}
                     forecasts={forecasts}
                   />
                 )}
 
                 {activeTab === 'standings' && (
-                  <Leaderboard
-                    standings={standings}
+                  <Leaderboard 
+                    standings={standings} 
                     currentUser={currentUser}
                     prizes={prizes}
                   />
@@ -561,6 +749,7 @@ export default function App() {
                     standings={standings}
                     allForecasts={allForecasts}
                     currentUserUid={currentUser.uid}
+                    isUserAdmin={isUserAdmin}
                   />
                 )}
 
@@ -569,14 +758,17 @@ export default function App() {
                 )}
 
                 {activeTab === 'admin' && isUserAdmin && (
-                  <AdminPanel
+                  <AdminPanel 
                     currentUser={currentUser!}
-                    matches={matches}
-                    onAddMatch={handleAddMatch}
+                    matches={matches} 
+                    onAddMatch={handleAddMatch} 
                     onSettleMatch={handleSettleMatch}
+                    onUnsettleMatch={handleUnsettleMatch}
                     prizes={prizes}
                     onUpdatePrizes={handleUpdatePrizes}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
+                    users={users}
+                    onUpdateUser={handleUpdateUser}
                   />
                 )}
               </div>
@@ -586,98 +778,23 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Mandatory Onboarding Modal Overlay */}
-      <AnimatePresence>
-        {showOnboarding && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[100] bg-blue-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-center text-white relative">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                <Award className="h-12 w-12 mx-auto mb-3 text-yellow-400" />
-                <h2 className="text-xl font-black tracking-tight">Completá tus datos</h2>
-                <p className="text-blue-100 text-xs mt-1">Requisito obligatorio para cobrar premios</p>
-              </div>
-
-              <div className="p-6 space-y-5">
-                <p className="text-sm text-slate-600 leading-relaxed text-center font-medium">
-                  Hola <span className="font-bold text-blue-700">{currentUser.name}</span>, necesitamos que confirmes tu número de legajo y gerencia. Esto nos permite identificarte si resultás ganador.
-                </p>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                      Número de Legajo
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej: 12345"
-                      value={onboardLegajo}
-                      onChange={e => setOnboardLegajo(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                      Gerencia / Sector
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej: Sistemas, Comercial, RRHH..."
-                      value={onboardGerencia}
-                      onChange={e => setOnboardGerencia(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                    />
-                  </div>
-                </div>
-
-                {onboardErr && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-600 text-xs font-bold">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    <span>{onboardErr}</span>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSaveOnboarding}
-                  disabled={onboardLoading}
-                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {onboardLoading ? 'Guardando...' : 'Guardar y Continuar al Prode'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Footer Info credit with corporate AI and bonding notice */}
       <footer className="py-8 border-t border-slate-200 text-center text-xs text-slate-500 mt-12 bg-white">
         <div className="max-w-3xl mx-auto px-4 space-y-4">
           <p className="font-black text-slate-700">Prode Corporativo Web – Torneo Oficial de Empleados de BanCo</p>
-
+          
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl text-left space-y-2.5 text-[11px] text-slate-600 max-w-2xl mx-auto leading-relaxed">
             <span className="font-bold text-blue-900 block text-center">
               🤖 Sistema Diseñado & Acelerado con Inteligencia Artificial (IA)
             </span>
             <p className="text-center text-slate-500 text-xs">
-              Nos complace compartir con todos los colaboradores de <strong>Banco de Corrientes S.A.</strong> que esta plataforma interactiva de pronósticos deportivos ha sido desarrollada e implementada por nuestro <strong>Equipo Mobile</strong>, con la ayuda de la última generación de <strong>Inteligencia Artificial</strong> para poder llegar a este increíble resultado en un tiempo récord. Esta potente sinergia nos demuestra cómo la tecnología nos ampara para acelerar tareas complejas, automatizar cálculos interactivos y promover la integración y diversión sana entre los equipos de la institución.
-            </p>
-            <p className="text-center text-slate-600 font-medium text-xs mt-2">
-              Invitamos a toda la empresa a <em>amigarse con la IA</em>, explorarla y aprovechar toda su potencia para revolucionar sus tareas diarias y llevar los próximos desarrollos a un nuevo nivel.
+              Nos complace compartir con todos los colaboradores de <strong>Banco de Corrientes S.A.</strong> que esta plataforma interactiva de pronósticos deportivos ha sido desarrollada y perfeccionada utilizando la última generación de <strong>Inteligencia Artificial</strong>. Esta potente sinergia nos demuestra cómo la tecnología nos ampara para acelerar tareas complejas, automatizar cálculos interactivos y promover la integración y diversión sana entre los equipos de la institución.
             </p>
             <p className="font-bold text-center text-blue-900 mt-2 select-none">
               ¡Les deseamos el mayor de los éxitos en sus predicciones y marcadores! ⚽🇦🇷🧉
             </p>
           </div>
-
+          
           <p className="text-[10px] text-slate-400">
             © {new Date().getFullYear()} Banco de Corrientes S.A. • Procesamiento de Datos Protegido
           </p>

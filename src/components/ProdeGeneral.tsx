@@ -23,8 +23,8 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
   // Helper to determine if match predictions are locked
   const isMatchLocked = (matchDateStr: string) => {
     const kickoff = new Date(matchDateStr).getTime();
-    const oneHourMs = 60 * 60 * 1000;
-    const lockTime = kickoff - oneHourMs;
+    const fiveMinutesMs = 5 * 60 * 1000;
+    const lockTime = kickoff - fiveMinutesMs;
     return Date.now() >= lockTime;
   };
 
@@ -285,7 +285,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
         <Info className="h-4.5 w-4.5 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-xs text-blue-800 leading-relaxed">
           <span className="font-bold block mb-0.5">Fase de Grupos y Play-Offs</span>
-          Los pronósticos correspondientes a partidos pendientes solo se vuelven visibles para el resto de los participantes una vez bloqueada la hora de carga (1 hora antes del pitazo inicial), resguardando la competitividad y evitando plagio de estrategias de marcadores corporativos.
+          Los pronósticos correspondientes a partidos pendientes solo se vuelven visibles para el resto de los participantes una vez bloqueada la hora de carga (5 minutos antes del pitazo inicial), resguardando la competitividad y evitando plagio de estrategias de marcadores corporativos.
         </div>
       </div>
 

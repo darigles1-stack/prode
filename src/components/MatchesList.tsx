@@ -86,8 +86,8 @@ export const MatchesList: React.FC<MatchesListProps> = ({
   // Helper to calculate lock status
   const getLockInfo = (matchDateStr: string) => {
     const kickoff = new Date(matchDateStr).getTime();
-    const oneHourMs = 60 * 60 * 1000;
-    const lockTime = kickoff - oneHourMs;
+    const fiveMinutesMs = 5 * 60 * 1000;
+    const lockTime = kickoff - fiveMinutesMs;
     const now = Date.now();
     const isLocked = now >= lockTime;
 

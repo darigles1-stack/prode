@@ -37,15 +37,13 @@ service cloud.firestore {
 
     // Entity validations
     function isValidUser(data) {
-      let isLegajoValid = !data.keys().hasAny(['legajo']) || (data.legajo is string && data.legajo.size() <= 100);
-      let isGerenciaValid = !data.keys().hasAny(['gerencia']) || (data.gerencia is string && data.gerencia.size() <= 100);
-
       return data.uid is string && data.uid.size() <= 128 &&
              data.name is string && data.name.size() <= 200 &&
              data.email is string && data.email.size() <= 200 &&
              data.points is int &&
              data.createdAt is timestamp &&
-             isLegajoValid && isGerenciaValid;
+             (!('photoURL' in data) || data.photoURL is string) &&
+             (!('isAdmin' in data) || data.isAdmin is bool);
     }
 
     function isValidMatch(data) {
@@ -72,8 +70,7 @@ service cloud.firestore {
       allow update: if isVerified() && (
         // Regular user modifying their own profile (cannot change points or isAdmin)
         (request.auth.uid == userId && 
-         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'photoURL', 'updatedAt', 'legajo', 'gerencia']) &&
-         isValidUser(incoming()) &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'photoURL', 'updatedAt']) &&
          incoming().points == existing().points) ||
         // Admin can update anything (e.g. updating points or isAdmin flag)
         isAdmin()
@@ -93,15 +90,15 @@ service cloud.firestore {
                     isValidForecast(incoming()) &&
                     // Check physical existence of the match
                     exists(/databases/$(database)/documents/matches/$(incoming().matchId)) &&
-                    // Restrict creation to 1 hour before kickoff
-                    request.time < get(/databases/$(database)/documents/matches/$(incoming().matchId)).data.matchDate - duration.value(3600, 's');
+                    // Restrict creation to 15 minutes before kickoff
+                    request.time < get(/databases/$(database)/documents/matches/$(incoming().matchId)).data.matchDate - duration.value(900, 's');
       
       allow update: if isVerified() && (
         // Regular user modifying their own forecast (cannot change userId, matchId, pointsEarned)
         (existing().userId == request.auth.uid && 
          isValidForecast(incoming()) &&
-         // Limit to 1 hour before kickoff
-         request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(3600, 's') &&
+         // Limit to 15 minutes before kickoff
+         request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(900, 's') &&
          incoming().diff(existing()).affectedKeys().hasOnly(['homeScore', 'awayScore', 'updatedAt']) &&
          (!existing().keys().hasAny(['pointsEarned']) || incoming().pointsEarned == existing().pointsEarned)) ||
         // Admin settling predictions or correcting
@@ -109,7 +106,7 @@ service cloud.firestore {
       );
       
       allow delete: if isVerified() && existing().userId == request.auth.uid && 
-                    request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(3600, 's');
+                    request.time < get(/databases/$(database)/documents/matches/$(existing().matchId)).data.matchDate - duration.value(900, 's');
     }
 
     // Admins index collection
