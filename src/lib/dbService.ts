@@ -799,52 +799,70 @@ export const dbService = {
   // --- LEADERBOARD STANDINGS ---
   subscribeStandings(callback: (standings: Standing[]) => void) {
     if (isFirebaseActive && db) {
-      // Real time stream on users and forecasts to build exact, consistent leaderboard
-      return onSnapshot(collection(db, 'users'), (usersSnapshot) => {
-        // We also listen to forecasts to enrich extra hits analytics
-        onSnapshot(collection(db, 'forecasts'), (forecastsSnapshot) => {
-          const users: UserProfile[] = [];
-          usersSnapshot.forEach(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt instanceof Timestamp 
-              ? data.createdAt.toDate().toISOString() 
-              : (data.createdAt || new Date().toISOString());
-            const updatedAt = data.updatedAt instanceof Timestamp 
-              ? data.updatedAt.toDate().toISOString() 
-              : data.updatedAt;
+      let users: UserProfile[] = [];
+      let forecasts: UserForecast[] = [];
+      let usersLoaded = false;
+      let forecastsLoaded = false;
 
-            users.push({ 
-              ...data, 
-              createdAt,
-              updatedAt,
-              uid: doc.id 
-            } as UserProfile);
-          });
-
-          const forecasts: UserForecast[] = [];
-          forecastsSnapshot.forEach(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt instanceof Timestamp 
-              ? data.createdAt.toDate().toISOString() 
-              : (data.createdAt || new Date().toISOString());
-            const updatedAt = data.updatedAt instanceof Timestamp 
-              ? data.updatedAt.toDate().toISOString() 
-              : data.updatedAt;
-
-            forecasts.push({
-              ...data,
-              createdAt,
-              updatedAt,
-              id: doc.id
-            } as UserForecast);
-          });
-
+      const triggerCallback = () => {
+        if (usersLoaded && forecastsLoaded) {
           const standings = computeStandings(users, forecasts);
           callback(standings);
+        }
+      };
+
+      const unsubUsers = onSnapshot(collection(db, 'users'), (usersSnapshot) => {
+        users = [];
+        usersSnapshot.forEach(doc => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
+          users.push({ 
+            ...data, 
+            createdAt,
+            updatedAt,
+            uid: doc.id 
+          } as UserProfile);
         });
+        usersLoaded = true;
+        triggerCallback();
       }, (error) => {
         handleFirestoreError(error, OperationType.LIST, 'users');
       });
+
+      const unsubForecasts = onSnapshot(collection(db, 'forecasts'), (forecastsSnapshot) => {
+        forecasts = [];
+        forecastsSnapshot.forEach(doc => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
+          forecasts.push({
+            ...data,
+            createdAt,
+            updatedAt,
+            id: doc.id
+          } as UserForecast);
+        });
+        forecastsLoaded = true;
+        triggerCallback();
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'forecasts');
+      });
+
+      return () => {
+        unsubUsers();
+        unsubForecasts();
+      };
     } else {
       // Offline simulation
       const users = getLocalData<UserProfile>('users', SEED_USERS);
