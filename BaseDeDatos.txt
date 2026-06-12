@@ -21,3 +21,32 @@ Modo Prodi
   "messagingSenderId": "756548444738",
   "measurementId": "G-8P23SGY4WQ"
 }
+
+ejemplo de carga masiva 
+
+[
+  { "local": "México", "visitante": "Sudáfrica", "golesLocal": 2, "golesVisitante": 1 },
+  { "local": "Corea del Sur", "visitante": "Rep. Checa", "golesLocal": 1, "golesVisitante": 1 },
+  { "local": "Canadá", "visitante": "Bosnia y Herzegovina", "golesLocal": 0, "golesVisitante": 2 },
+  { "local": "EE.UU.", "visitante": "Paraguay", "golesLocal": 1, "golesVisitante": 0 },
+  { "local": "Qatar", "visitante": "Suiza", "golesLocal": 0, "golesVisitante": 2 },
+  { "local": "Brasil", "visitante": "Marruecos", "golesLocal": 3, "golesVisitante": 1 },
+  { "local": "Haití", "visitante": "Escocia", "golesLocal": 0, "golesVisitante": 2 },
+  { "local": "Australia", "visitante": "Turquía", "golesLocal": 1, "golesVisitante": 2 },
+  { "local": "Alemania", "visitante": "Curazao", "golesLocal": 4, "golesVisitante": 0 },
+  { "local": "Países Bajos", "visitante": "Japón", "golesLocal": 2, "golesVisitante": 2 },
+  { "local": "Costa de Marfil", "visitante": "Ecuador", "golesLocal": 1, "golesVisitante": 1 },
+  { "local": "Suecia", "visitante": "Túnez", "golesLocal": 2, "golesVisitante": 0 },
+  { "local": "España", "visitante": "Cabo Verde", "golesLocal": 3, "golesVisitante": 0 },
+  { "local": "Bélgica", "visitante": "Egipto", "golesLocal": 2, "golesVisitante": 1 },
+  { "local": "Arabia Saudí", "visitante": "Uruguay", "golesLocal": 0, "golesVisitante": 2 },
+  { "local": "Irán", "visitante": "Nueva Zelanda", "golesLocal": 1, "golesVisitante": 1 },
+  { "local": "Francia", "visitante": "Senegal", "golesLocal": 2, "golesVisitante": 1 },
+  { "local": "Irak", "visitante": "Noruega", "golesLocal": 0, "golesVisitante": 2 },
+  { "local": "Argentina", "visitante": "Argelia", "golesLocal": 3, "golesVisitante": 0 },
+  { "local": "Austria", "visitante": "Jordania", "golesLocal": 2, "golesVisitante": 1 },
+  { "local": "Portugal", "visitante": "RD de Congo", "golesLocal": 3, "golesVisitante": 1 },
+  { "local": "Inglaterra", "visitante": "Croacia", "golesLocal": 2, "golesVisitante": 2 },
+  { "local": "Ghana", "visitante": "Panamá", "golesLocal": 1, "golesVisitante": 0 },
+  { "local": "Uzbekistán", "visitante": "Colombia", "golesLocal": 0, "golesVisitante": 2 }
+]
