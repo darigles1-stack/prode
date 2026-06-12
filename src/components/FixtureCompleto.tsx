@@ -211,10 +211,11 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
                         <img 
-                          src={`https://hatscripts.github.io/circle-flags/flags/${getCountryCode(f.local)}.svg`} 
+                          src={`/flags/${getCountryCode(f.local)}.svg`} 
                           alt={f.local} 
                           title={f.local}
                           className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          referrerPolicy="no-referrer"
                         />
                         <span>{f.local}</span>
                       </div>
@@ -237,10 +238,11 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <div className="flex items-center gap-2">
                         <img 
-                          src={`https://hatscripts.github.io/circle-flags/flags/${getCountryCode(f.visitante)}.svg`} 
+                          src={`/flags/${getCountryCode(f.visitante)}.svg`} 
                           alt={f.visitante} 
                           title={f.visitante}
                           className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          referrerPolicy="no-referrer"
                         />
                         <span>{f.visitante}</span>
                       </div>
