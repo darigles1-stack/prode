@@ -1,28 +1,29 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
+import {
+  getFirestore,
+  collection,
+  doc,
   getDoc,
-  getDocs, 
-  setDoc, 
-  updateDoc, 
+  getDocs,
+  setDoc,
+  updateDoc,
   addDoc,
   deleteDoc,
-  query, 
-  where, 
-  orderBy, 
+  query,
+  where,
+  orderBy,
   onSnapshot,
   Timestamp,
-  getDocFromServer
+  getDocFromServer,
+  writeBatch
 } from 'firebase/firestore';
 import { SoccerMatch, UserProfile, UserForecast, Standing } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -47,19 +48,19 @@ export const activeConfig = {
   storageBucket: envConfig.storageBucket || firebaseConfig?.storageBucket,
   messagingSenderId: envConfig.messagingSenderId || firebaseConfig?.messagingSenderId,
   appId: envConfig.appId || firebaseConfig?.appId,
-  firestoreDatabaseId: envConfig.firestoreDatabaseId 
-    ? envConfig.firestoreDatabaseId 
+  firestoreDatabaseId: envConfig.firestoreDatabaseId
+    ? envConfig.firestoreDatabaseId
     : (
-        (envConfig.projectId && envConfig.projectId !== firebaseConfig?.projectId) 
-          ? undefined 
-          : firebaseConfig?.firestoreDatabaseId
-      ),
+      (envConfig.projectId && envConfig.projectId !== firebaseConfig?.projectId)
+        ? undefined
+        : firebaseConfig?.firestoreDatabaseId
+    ),
 };
 
 // Detect if real Firebase is configured
-export const isFirebaseActive = 
-  activeConfig && 
-  activeConfig.apiKey && 
+export const isFirebaseActive =
+  activeConfig &&
+  activeConfig.apiKey &&
   activeConfig.apiKey !== 'placeholder' &&
   activeConfig.projectId !== 'placeholder';
 
@@ -71,7 +72,7 @@ if (isFirebaseActive) {
   try {
     app = getApps().length === 0 ? initializeApp(activeConfig) : getApp();
     auth = getAuth(app);
-    db = activeConfig.firestoreDatabaseId 
+    db = activeConfig.firestoreDatabaseId
       ? getFirestore(app, activeConfig.firestoreDatabaseId)
       : getFirestore(app);
 
@@ -262,17 +263,17 @@ export const dbService = {
             // Get user profile from firestore
             const userDocRef = doc(db, 'users', user.uid);
             let userSnap = await getDoc(userDocRef);
-            
+
             let profile: UserProfile;
             const isBootstrappedAdmin = user.email === 'darigles1@gmail.com';
-            
+
             if (userSnap.exists()) {
               const data = userSnap.data();
-              const createdAt = data.createdAt instanceof Timestamp 
-                ? data.createdAt.toDate().toISOString() 
+              const createdAt = data.createdAt instanceof Timestamp
+                ? data.createdAt.toDate().toISOString()
                 : (data.createdAt || new Date().toISOString());
-              const updatedAt = data.updatedAt instanceof Timestamp 
-                ? data.updatedAt.toDate().toISOString() 
+              const updatedAt = data.updatedAt instanceof Timestamp
+                ? data.updatedAt.toDate().toISOString()
                 : data.updatedAt;
 
               profile = {
@@ -281,7 +282,7 @@ export const dbService = {
                 createdAt,
                 updatedAt
               } as UserProfile;
-              
+
               // Ensure backend admin aligns with the boostrapped rule
               if (isBootstrappedAdmin && !profile.isAdmin) {
                 profile.isAdmin = true;
@@ -298,9 +299,9 @@ export const dbService = {
                 isAdmin: isBootstrappedAdmin,
                 createdAt: createdAtTimestamp
               };
-              
+
               await setDoc(userDocRef, profilePayload);
-              
+
               // Register also in admins collection if admin
               if (isBootstrappedAdmin) {
                 await setDoc(doc(db, 'admins', user.uid), {
@@ -340,7 +341,7 @@ export const dbService = {
       } else {
         callback(null);
       }
-      return () => {}; // return unsubscribing function
+      return () => { }; // return unsubscribing function
     }
   },
 
@@ -350,19 +351,19 @@ export const dbService = {
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      
+
       const isBootstrappedAdmin = user.email === 'darigles1@gmail.com';
       const userDocRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userDocRef);
-      
+
       let profile: UserProfile;
       if (userSnap.exists()) {
         const data = userSnap.data();
-        const createdAt = data.createdAt instanceof Timestamp 
-          ? data.createdAt.toDate().toISOString() 
+        const createdAt = data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
           : (data.createdAt || new Date().toISOString());
-        const updatedAt = data.updatedAt instanceof Timestamp 
-          ? data.updatedAt.toDate().toISOString() 
+        const updatedAt = data.updatedAt instanceof Timestamp
+          ? data.updatedAt.toDate().toISOString()
           : data.updatedAt;
 
         profile = {
@@ -428,7 +429,7 @@ export const dbService = {
   async createMockUser(name: string, email: string): Promise<UserProfile> {
     const list = getLocalData('users', SEED_USERS);
     const emailLower = email.toLowerCase();
-    
+
     // Check if exists
     const existingUser = list.find(u => u.email.toLowerCase() === emailLower);
     if (existingUser) {
@@ -494,13 +495,13 @@ export const dbService = {
       // Local implementation
       const matches = getLocalData('matches', SEED_MATCHES);
       // Sort matches
-      const sorted = [...matches].sort((a,b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+      const sorted = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
       callback(sorted);
-      
+
       // Return unsubscription wrapper
       const listener = () => {
         const updated = getLocalData('matches', SEED_MATCHES);
-        callback([...updated].sort((a,b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()));
+        callback([...updated].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()));
       };
       window.addEventListener('prode_db_updated', listener);
       return () => {
@@ -568,11 +569,11 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate().toISOString() 
+          const createdAt = data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate().toISOString() 
+          const updatedAt = data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
             : data.updatedAt;
 
           forecasts.push({
@@ -612,11 +613,11 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate().toISOString() 
+          const createdAt = data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate().toISOString() 
+          const updatedAt = data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
             : data.updatedAt;
 
           forecasts.push({
@@ -648,11 +649,11 @@ export const dbService = {
   },
 
   async saveForecast(
-    userId: string, 
-    userName: string, 
-    userEmail: string, 
-    matchId: string, 
-    homeScore: number, 
+    userId: string,
+    userName: string,
+    userEmail: string,
+    matchId: string,
+    homeScore: number,
     awayScore: number
   ): Promise<void> {
     const forecastId = `${userId}_${matchId}`;
@@ -670,7 +671,7 @@ export const dbService = {
       try {
         const forecastRef = doc(db, 'forecasts', forecastId);
         const forecastSnap = await getDoc(forecastRef);
-        
+
         if (forecastSnap.exists()) {
           // Rule asserts only homeScore, awayScore, updatedAt can be modified
           await updateDoc(forecastRef, {
@@ -692,7 +693,7 @@ export const dbService = {
     } else {
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
       const idx = forecasts.findIndex(f => f.userId === userId && f.matchId === matchId);
-      
+
       if (idx > -1) {
         forecasts[idx].homeScore = Number(homeScore);
         forecasts[idx].awayScore = Number(awayScore);
@@ -815,18 +816,18 @@ export const dbService = {
         users = [];
         usersSnapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate().toISOString() 
+          const createdAt = data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate().toISOString() 
+          const updatedAt = data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
             : data.updatedAt;
 
-          users.push({ 
-            ...data, 
+          users.push({
+            ...data,
             createdAt,
             updatedAt,
-            uid: doc.id 
+            uid: doc.id
           } as UserProfile);
         });
         usersLoaded = true;
@@ -839,11 +840,11 @@ export const dbService = {
         forecasts = [];
         forecastsSnapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate().toISOString() 
+          const createdAt = data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate().toISOString() 
+          const updatedAt = data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
             : data.updatedAt;
 
           forecasts.push({
@@ -867,7 +868,7 @@ export const dbService = {
       // Offline simulation
       const users = getLocalData<UserProfile>('users', SEED_USERS);
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
-      
+
       const standings = computeStandings(users, forecasts);
       callback(standings);
 
@@ -887,18 +888,18 @@ export const dbService = {
         const users: UserProfile[] = [];
         snapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate().toISOString() 
+          const createdAt = data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate().toISOString() 
+          const updatedAt = data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
             : data.updatedAt;
 
-          users.push({ 
-            ...data, 
+          users.push({
+            ...data,
             createdAt,
             updatedAt,
-            uid: doc.id 
+            uid: doc.id
           } as UserProfile);
         });
         callback(users);
@@ -933,7 +934,7 @@ export const dbService = {
           updatedAt: new Date().toISOString()
         };
         setLocalData('users', users);
-        
+
         // Update current user locally if it's the current user
         const currentUserStr = localStorage.getItem('prode_current_user');
         if (currentUserStr) {
@@ -946,7 +947,7 @@ export const dbService = {
             }));
           }
         }
-        
+
         window.dispatchEvent(new Event('prode_db_updated'));
       }
     }
@@ -991,13 +992,24 @@ export const dbService = {
         const forecastsRef = collection(db, 'forecasts');
         const forecastsSnap = await getDocs(forecastsRef);
         const userForecasts: { [userId: string]: any[] } = {};
-        
+
+        let batch = writeBatch(db);
+        let writeCount = 0;
+
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
         // Update individual forecast points if the match is finished but the forecast wasn't scored correctly
         for (const fDoc of forecastsSnap.docs) {
           const fData = fDoc.data();
           const match = matchesMap[fData.matchId];
           const userId = fData.userId;
-          
+
           if (!userId) continue;
 
           if (!userForecasts[userId]) {
@@ -1025,19 +1037,22 @@ export const dbService = {
 
             if (pointsEarned !== calculatedPoints) {
               pointsEarned = calculatedPoints;
-              // Update in Firestore
-              await updateDoc(doc(db, 'forecasts', fDoc.id), {
+              batch.update(doc(db, 'forecasts', fDoc.id), {
                 pointsEarned,
                 updatedAt: Timestamp.now()
               });
+              writeCount++;
+              await checkAndCommitBatch();
             }
           } else {
             if (pointsEarned !== null) {
               pointsEarned = null;
-              await updateDoc(doc(db, 'forecasts', fDoc.id), {
+              batch.update(doc(db, 'forecasts', fDoc.id), {
                 pointsEarned: null,
                 updatedAt: Timestamp.now()
               });
+              writeCount++;
+              await checkAndCommitBatch();
             }
           }
 
@@ -1047,14 +1062,14 @@ export const dbService = {
           });
         }
 
-        // 3. For each user, sum points and update their profile
+        // 3. For each user, sum points and update their profile only if points actually changed!
         const usersRef = collection(db, 'users');
         const usersSnap = await getDocs(usersRef);
-        
+
         for (const uDoc of usersSnap.docs) {
           const userId = uDoc.id;
           const forecasts = userForecasts[userId] || [];
-          
+
           let totalPoints = 0;
           forecasts.forEach(f => {
             if (f.pointsEarned !== null && f.pointsEarned !== undefined) {
@@ -1062,11 +1077,21 @@ export const dbService = {
             }
           });
 
-          // Update user points in database
-          await updateDoc(doc(db, 'users', userId), {
-            points: totalPoints,
-            updatedAt: Timestamp.now()
-          });
+          // Only perform document update write if totalPoints differs from current data points
+          const currentPoints = uDoc.data().points ?? 0;
+          if (totalPoints !== currentPoints) {
+            batch.update(doc(db, 'users', userId), {
+              points: totalPoints,
+              updatedAt: Timestamp.now()
+            });
+            writeCount++;
+            await checkAndCommitBatch();
+          }
+        }
+
+        // Commit any remaining writes in the active batch
+        if (writeCount > 0) {
+          await batch.commit();
         }
       } else {
         // Localstorage offline sync
@@ -1115,7 +1140,7 @@ export const dbService = {
         });
 
         localStorage.setItem('prode_users', JSON.stringify(users));
-        
+
         // Update session if currently logged in
         const currentUser = localStorage.getItem('prode_current_user');
         if (currentUser) {

@@ -123,7 +123,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
   const handleSubmit = async (matchId: string) => {
     const customState = inputStates[matchId];
     const existing = getForecast(matchId);
-    
+
     // Fallback to existing or empty
     const hStr = customState?.home !== undefined ? customState.home : (existing ? String(existing.homeScore) : '');
     const aStr = customState?.away !== undefined ? customState.away : (existing ? String(existing.awayScore) : '');
@@ -143,7 +143,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
     setErrorFeedback(prev => ({ ...prev, [matchId]: '' }));
     setSavingId(matchId);
-    
+
     try {
       await onSaveForecast(matchId, home, away);
       setSuccessFeedback(prev => ({ ...prev, [matchId]: true }));
@@ -166,36 +166,33 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
   return (
     <div id="matches-panel" className="space-y-6">
-      
+
       {/* Filters Hub Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-950 border border-blue-900 p-4 rounded-xl">
         <div>
           <h3 className="text-sm font-semibold text-white">Fixture de Partidos</h3>
           <p className="text-xs text-blue-200">Guardá tus pronósticos exactos para acumular puntos</p>
         </div>
-        
+
         <div className="flex border border-blue-800 bg-blue-900/50 p-1 rounded-xl w-fit">
           <button
             onClick={() => setFilter('all')}
-            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-              filter === 'all' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
-            }`}
+            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${filter === 'all' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
+              }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilter('pending')}
-            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-              filter === 'pending' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
-            }`}
+            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${filter === 'pending' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
+              }`}
           >
             Pendientes
           </button>
           <button
             onClick={() => setFilter('finished')}
-            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-              filter === 'finished' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
-            }`}
+            className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${filter === 'finished' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
+              }`}
           >
             Finalizados
           </button>
@@ -211,15 +208,15 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             const hasStarted = Date.now() >= new Date(match.matchDate).getTime();
 
             // Local input memory or default to loaded forecast
-            const homeVal = inputStates[match.id]?.home !== undefined 
-              ? inputStates[match.id].home 
+            const homeVal = inputStates[match.id]?.home !== undefined
+              ? inputStates[match.id].home
               : (forecast ? String(forecast.homeScore) : '');
-            
-            const awayVal = inputStates[match.id]?.away !== undefined 
-              ? inputStates[match.id].away 
+
+            const awayVal = inputStates[match.id]?.away !== undefined
+              ? inputStates[match.id].away
               : (forecast ? String(forecast.awayScore) : '');
 
-            const isFormDirty = forecast 
+            const isFormDirty = forecast
               ? (homeVal !== String(forecast.homeScore) || awayVal !== String(forecast.awayScore))
               : (homeVal !== '' || awayVal !== '');
 
@@ -236,20 +233,19 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
               const pts = forecast.pointsEarned ?? 0;
               return (
-                <div className={`mt-3.5 flex items-center justify-between text-xs p-3 rounded-xl border ${
-                  pts === 3 
-                    ? 'bg-yellow-50 text-yellow-900 border-yellow-200' 
-                    : pts === 1 
+                <div className={`mt-3.5 flex items-center justify-between text-xs p-3 rounded-xl border ${pts === 3
+                    ? 'bg-yellow-50 text-yellow-900 border-yellow-200'
+                    : pts === 1
                       ? 'bg-blue-50 text-blue-900 border-blue-200'
                       : 'bg-rose-50 text-rose-800 border-rose-200'
-                }`}>
+                  }`}>
                   <div className="flex items-center space-x-1.5">
                     <ShieldCheck className="h-4 w-4 shrink-0 text-blue-700" />
                     <span className="font-medium">
-                      {pts === 3 
-                        ? '🔥 ¡Acertaste resultado exacto!' 
-                        : pts === 1 
-                          ? '✅ ¡Acertaste ganador / empate!' 
+                      {pts === 3
+                        ? '🔥 ¡Acertaste resultado exacto!'
+                        : pts === 1
+                          ? '✅ ¡Acertaste ganador / empate!'
                           : '❌ Resultado errado'}
                     </span>
                   </div>
@@ -261,13 +257,12 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             };
 
             return (
-              <div 
-                key={match.id} 
-                className={`bg-white border text-left rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between ${
-                  match.status === 'finished' ? 'border-blue-100 bg-blue-50/10' : 'border-slate-200'
-                }`}
+              <div
+                key={match.id}
+                className={`bg-white border text-left rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between ${match.status === 'finished' ? 'border-blue-100 bg-blue-50/10' : 'border-slate-200'
+                  }`}
               >
-                
+
                 {/* Match Header Info */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
@@ -308,11 +303,11 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     {/* Home Team */}
                     <div className="flex-1 flex items-center justify-end font-semibold text-sm text-slate-800 pr-2">
                       <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
-                        <img 
-                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
-                          alt={getTeamNameAndFlag(match.homeTeam).name} 
+                        <img
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`}
+                          alt={getTeamNameAndFlag(match.homeTeam).name}
                           title={getTeamNameAndFlag(match.homeTeam).name}
-                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          className="w-5 h-5 rounded-full shadow-sm select-none"
                         />
                         <span>{getTeamNameAndFlag(match.homeTeam).name}</span>
                       </div>
@@ -331,7 +326,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           VS
                         </span>
                       )}
-                      
+
                       <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold mt-1">
                         Resultado Real
                       </span>
@@ -341,11 +336,11 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     <div className="flex-1 flex items-center justify-start font-semibold text-sm text-slate-800 pl-2">
                       <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
                         <span>{getTeamNameAndFlag(match.awayTeam).name}</span>
-                        <img 
-                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
-                          alt={getTeamNameAndFlag(match.awayTeam).name} 
+                        <img
+                          src={`https://hatscripts.github.io/circle-flags/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`}
+                          alt={getTeamNameAndFlag(match.awayTeam).name}
                           title={getTeamNameAndFlag(match.awayTeam).name}
-                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          className="w-5 h-5 rounded-full shadow-sm select-none"
                         />
                       </div>
                     </div>
@@ -375,13 +370,13 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={homeVal}
                           onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                          disabled={isLocked || match.status === 'finished'}
+                          disabled={isLocked || match.status === 'finished' || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
-                        
+
                         <span className="text-slate-300 font-bold">:</span>
-                        
+
                         {/* Away Forecasted score input */}
                         <input
                           type="text"
@@ -390,7 +385,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={awayVal}
                           onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                          disabled={isLocked || match.status === 'finished'}
+                          disabled={isLocked || match.status === 'finished' || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
@@ -401,16 +396,21 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                         <button
                           onClick={() => handleSubmit(match.id)}
                           disabled={isLocked || savingId === match.id || !isFormDirty}
-                          className={`px-3 py-2 text-xs font-bold rounded-lg flex items-center space-x-1 transition-all shadow-sm cursor-pointer ${
-                            isLocked 
+                          className={`px-3 py-2 text-xs font-bold rounded-lg flex items-center space-x-1 transition-all shadow-sm cursor-pointer ${isLocked
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed border'
-                              : !isFormDirty 
-                                ? 'bg-slate-55 text-slate-400 border border-slate-250 hover:text-slate-600 hover:bg-slate-100'
-                                : 'bg-yellow-405 bg-yellow-400 text-blue-955 text-blue-900 border border-yellow-500/20 hover:bg-yellow-500'
-                          }`}
+                              : savingId === match.id
+                                ? 'bg-amber-100 text-amber-700 border border-amber-250 cursor-not-allowed'
+                                : !isFormDirty
+                                  ? 'bg-slate-55 text-slate-400 border border-slate-250 hover:text-slate-600 hover:bg-slate-100'
+                                  : 'bg-yellow-405 bg-yellow-400 text-blue-955 text-blue-900 border border-yellow-500/20 hover:bg-yellow-500'
+                            }`}
                         >
-                          <Save className="h-3.5 w-3.5" />
-                          <span>{forecast ? 'Actualizar' : 'Guardar'}</span>
+                          {savingId === match.id ? (
+                            <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Save className="h-3.5 w-3.5" />
+                          )}
+                          <span>{savingId === match.id ? 'Guardando...' : (forecast ? 'Actualizar' : 'Guardar')}</span>
                         </button>
                       )}
                     </div>
@@ -449,7 +449,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
           <p className="text-xs text-slate-500 mt-2 max-w-sm mx-auto leading-relaxed">
             Parece que aún no se han cargado los enfrentamientos correspondientes al Prode Corporativo de la fecha.
           </p>
-          
+
           {isUserAdmin ? (
             <div className="mt-6 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl space-y-3.5 text-left">
               <span className="text-[10px] uppercase font-mono font-black text-blue-800 tracking-wider bg-white px-2.5 py-1 rounded-full border border-blue-105">
@@ -458,7 +458,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
               <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                 Como Administrador, podés cargar instantáneamente el **Fixture Oficial Prode de 10 Partidos** para que todos los empleados de la institución comiencen a emitir sus pronósticos.
               </p>
-              
+
               {fixtureSuccess ? (
                 <div className="bg-emerald-50 border border-emerald-250 p-2.5 rounded-xl text-center text-xs font-bold text-emerald-800">
                   ¡Fixture de partidos cargado con éxito! Cargando listado de inmediato...
