@@ -1,0 +1,23 @@
+Modo DEV
+
+{
+  apiKey: "AIzaSyA8uSPGtLBPIPYb8v1E4gDa2AhS_tm7sBM",
+  authDomain: "crud-firebase-81d2e.firebaseapp.com",
+  projectId: "crud-firebase-81d2e",
+  storageBucket: "crud-firebase-81d2e.firebasestorage.app",
+  messagingSenderId: "175053339452",
+  appId: "1:175053339452:web:33df60fdfe00416460fc39"
+};
+
+Modo Prodi
+
+{
+  "projectId": "conteo-prode",
+  "appId": "1:756548444738:web:94867999a2c3470ad703db",
+  "apiKey": "AIzaSyCgEaz9nXOCBno9LXX7MyKm_9qsCYOB-oM",
+  "authDomain": "conteo-prode.firebaseapp.com",
+  "firestoreDatabaseId": "",
+  "storageBucket": "conteo-prode.firebasestorage.app",
+  "messagingSenderId": "756548444738",
+  "measurementId": "G-8P23SGY4WQ"
+}
