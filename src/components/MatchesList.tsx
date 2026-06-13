@@ -282,7 +282,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   <span className="text-[9px] font-bold uppercase tracking-wider block mt-0.5 font-mono">
                     {totalMatches > 0 ? (
                       <span className={finishedInPhase === totalMatches ? 'text-blue-700' : 'text-emerald-600'}>
-                        {finishedInPhase}/{totalMatches} Cerrados
+                        {finishedInPhase}/{totalMatches} Jugados
                       </span>
                     ) : isUnlocked ? (
                       <span className="text-amber-600">Por configurar ⚙️</span>

@@ -95,7 +95,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
               matchFilter === 'finished' ? 'bg-yellow-400 text-blue-950 shadow' : 'text-blue-100 hover:text-white'
             }`}
           >
-            Cerrados
+            Finalizados
           </button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                           </span>
                         ) : isMatchLocked(match.matchDate) ? (
                           <span className="text-[9px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-bold mt-1">
-                            Cerrado
+                            Bloqueado
                           </span>
                         ) : (
                           <span className="text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-semibold mt-1">

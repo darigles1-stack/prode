@@ -1261,7 +1261,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </h3>
         <p className="text-xs text-slate-500 mb-4">
           {settleSubTab === 'pending' && 'Ingresá los marcadores de partidos que finalizaron para calcular y acreditar los puntos.'}
-          {settleSubTab === 'finished' && 'Corregí los goles de cualquier partido cerrado. Los puntos se recalcularán automáticamente.'}
+          {settleSubTab === 'finished' && 'Corregí los goles de cualquier partido finalizado. Los puntos se recalcularán automáticamente.'}
           {settleSubTab === 'users' && 'Audita Legajos y Gerencias de colaboradores de Banco de Corrientes o suspende accesos.'}
         </p>
 
@@ -1506,7 +1506,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           ) : (
             <div className="p-8 text-center bg-slate-50 border border-slate-100 rounded-xl">
               <Calendar className="h-8 w-8 text-slate-350 mx-auto mb-2" />
-              <h4 className="font-semibold text-slate-700 text-xs">No hay partidos cerrados</h4>
+              <h4 className="font-semibold text-slate-700 text-xs">No hay partidos finalizados</h4>
               <p className="text-xs text-slate-400">Una vez que pongas marcador a un partido, aparecerá en esta lista para que puedas corregirlo cuando quieras.</p>
             </div>
           )

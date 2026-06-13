@@ -69,6 +69,10 @@ let app;
 let auth: any = null;
 let db: any = null;
 
+export const shouldUseFirebase = (): boolean => {
+  return !!(isFirebaseActive && db && auth?.currentUser);
+};
+
 if (isFirebaseActive) {
   try {
     app = getApps().length === 0 ? initializeApp(activeConfig) : getApp();
@@ -463,7 +467,7 @@ export const dbService = {
 
   // --- MATCHES SERVICES ---
   subscribeMatches(callback: (matches: SoccerMatch[]) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const q = query(collection(db, 'matches'), orderBy('matchDate', 'asc'));
       return onSnapshot(q, (snapshot) => {
         const matches: SoccerMatch[] = [];
@@ -513,7 +517,7 @@ export const dbService = {
   },
 
   async clearAllMatches(): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         const qSnap = await getDocs(collection(db, 'matches'));
         for (const docSnap of qSnap.docs) {
@@ -530,16 +534,17 @@ export const dbService = {
   },
 
   async addMatch(homeTeam: string, awayTeam: string, matchDateISO: string, phase: string = 'grupos', customId?: string): Promise<string> {
+    const isFirebase = shouldUseFirebase();
     const matchData = {
       homeTeam,
       awayTeam,
-      matchDate: isFirebaseActive ? Timestamp.fromDate(new Date(matchDateISO)) : matchDateISO,
+      matchDate: isFirebase ? Timestamp.fromDate(new Date(matchDateISO)) : matchDateISO,
       status: 'pending' as const,
       phase,
-      createdAt: isFirebaseActive ? Timestamp.now() : new Date().toISOString()
+      createdAt: isFirebase ? Timestamp.now() : new Date().toISOString()
     };
 
-    if (isFirebaseActive && db) {
+    if (isFirebase) {
       try {
         if (customId) {
           const docRef = doc(db, 'matches', customId);
@@ -585,7 +590,7 @@ export const dbService = {
 
   // --- FORECASTS SERVICES ---
   subscribeUserForecasts(userId: string, callback: (forecasts: UserForecast[]) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const q = query(collection(db, 'forecasts'), where('userId', '==', userId));
       return onSnapshot(q, (snapshot) => {
         const forecasts: UserForecast[] = [];
@@ -630,7 +635,7 @@ export const dbService = {
   },
 
   subscribeAllForecasts(callback: (forecasts: UserForecast[]) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       return onSnapshot(collection(db, 'forecasts'), (snapshot) => {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
@@ -678,6 +683,7 @@ export const dbService = {
     homeScore: number, 
     awayScore: number
   ): Promise<void> {
+    const isFirebase = shouldUseFirebase();
     const forecastId = `${userId}_${matchId}`;
     const forecastData = {
       userId,
@@ -686,10 +692,10 @@ export const dbService = {
       matchId,
       homeScore: Number(homeScore),
       awayScore: Number(awayScore),
-      updatedAt: isFirebaseActive ? Timestamp.now() : new Date().toISOString()
+      updatedAt: isFirebase ? Timestamp.now() : new Date().toISOString()
     };
 
-    if (isFirebaseActive && db) {
+    if (isFirebase) {
       try {
         const forecastRef = doc(db, 'forecasts', forecastId);
         const forecastSnap = await getDoc(forecastRef);
@@ -750,7 +756,7 @@ export const dbService = {
     const finalHomeScore = Number(homeScore);
     const finalAwayScore = Number(awayScore);
 
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         // 1. Update the match
         const matchRef = doc(db, 'matches', matchId);
@@ -785,7 +791,7 @@ export const dbService = {
   },
 
   async unsettleMatch(matchId: string): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         // 1. Reset match status and scores
         const matchRef = doc(db, 'matches', matchId);
@@ -821,7 +827,7 @@ export const dbService = {
 
   // --- LEADERBOARD STANDINGS ---
   subscribeStandings(callback: (standings: Standing[]) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       let users: UserProfile[] = [];
       let forecasts: UserForecast[] = [];
       let usersLoaded = false;
@@ -905,7 +911,7 @@ export const dbService = {
   },
 
   subscribeUsers(callback: (users: UserProfile[]) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       return onSnapshot(collection(db, 'users'), (snapshot) => {
         const users: UserProfile[] = [];
         snapshot.forEach(doc => {
@@ -940,7 +946,7 @@ export const dbService = {
   },
 
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         ...updates,
@@ -976,7 +982,7 @@ export const dbService = {
   },
 
   async toggleAdminStatus(userId: string, targetStatus: boolean, email?: string): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         isAdmin: targetStatus,
@@ -988,7 +994,7 @@ export const dbService = {
   },
 
   async deleteUser(userId: string): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
     } else {
@@ -1001,7 +1007,7 @@ export const dbService = {
 
   async syncUserForecastsAndPoints(): Promise<{ success: boolean; message: string }> {
     try {
-      if (isFirebaseActive && db) {
+      if (shouldUseFirebase()) {
         // 1. Fetch all matches
         const matchesRef = collection(db, 'matches');
         const matchesSnap = await getDocs(matchesRef);
@@ -1185,7 +1191,7 @@ export const dbService = {
   },
 
   async clearKnockoutMatches(phase: string): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         const qSnap = await getDocs(query(collection(db, 'matches'), where('phase', '==', phase)));
         for (const docSnap of qSnap.docs) {
@@ -1208,7 +1214,7 @@ export const dbService = {
     try {
       // 1. Fetch current existing matches of targetPhase to reuse their IDs (and save predictions)
       let existingMatchesOfPhase: SoccerMatch[] = [];
-      if (isFirebaseActive && db) {
+      if (shouldUseFirebase()) {
         try {
           const qSnap = await getDocs(query(collection(db, 'matches'), where('phase', '==', targetPhase)));
           existingMatchesOfPhase = qSnap.docs.map(docSnap => {
@@ -1466,9 +1472,9 @@ export const dbService = {
             { home: getFirstOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo G", 6) },
             { home: getFirstOfGroup("Grupo G", 6), away: getBestThirdOf(['Grupo B', 'Grupo C', 'Grupo H']) },
             { home: getSecondOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo H", 7) },
-            { home: getFirstOfGroup("Grupo H", 7), away: getBestThirdOf(['Grupo A', 'Grupo I', 'Grupo J']) },
-            { home: getFirstOfGroup("Grupo I", 8), away: getSecondOfGroup("Grupo J", 9) },
-            { home: getFirstOfGroup("Grupo J", 9), away: getBestThirdOf(['Grupo G', 'Grupo K', 'Grupo L']) },
+            { home: getFirstOfGroup("Grupo H", 7), away: getSecondOfGroup("Grupo J", 9) },
+            { home: getFirstOfGroup("Grupo I", 8), away: getBestThirdOf(['Grupo C', 'Grupo D', 'Grupo G', 'Grupo H']) },
+            { home: getFirstOfGroup("Grupo J", 9), away: getSecondOfGroup("Grupo H", 7) },
             { home: getSecondOfGroup("Grupo I", 8), away: getSecondOfGroup("Grupo K", 10) },
             { home: getFirstOfGroup("Grupo K", 10), away: getBestThirdOf(['Grupo E', 'Grupo H', 'Grupo L']) },
             { home: getFirstOfGroup("Grupo L", 11), away: getSecondOfGroupAB() }
@@ -1549,7 +1555,7 @@ export const dbService = {
         const existingMatch = existingMatchesOfPhase[i];
         
         if (existingMatch) {
-          if (isFirebaseActive && db) {
+          if (shouldUseFirebase()) {
             await setDoc(doc(db, 'matches', existingMatch.id), {
               homeTeam: pair.home,
               awayTeam: pair.away,
@@ -1579,7 +1585,7 @@ export const dbService = {
       if (existingMatchesOfPhase.length > pairings.length) {
         for (let i = pairings.length; i < existingMatchesOfPhase.length; i++) {
           const excessMatch = existingMatchesOfPhase[i];
-          if (isFirebaseActive && db) {
+          if (shouldUseFirebase()) {
             try {
               await deleteDoc(doc(db, 'matches', excessMatch.id));
             } catch (err) {
@@ -1626,7 +1632,7 @@ export const dbService = {
   },
 
   subscribeSettings(callback: (settingsData: { enabledPhases: string[] }) => void) {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       const docRef = doc(db, 'settings', 'config');
       return onSnapshot(docRef, (snap) => {
         if (snap.exists()) {
@@ -1667,7 +1673,7 @@ export const dbService = {
   },
 
   async updateEnabledPhases(enabledPhases: string[]): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         const docRef = doc(db, 'settings', 'config');
         await setDoc(docRef, { enabledPhases }, { merge: true });
@@ -1681,7 +1687,7 @@ export const dbService = {
   },
 
   async resetTournament(): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         // 1. Delete all forecasts
         const forecastsRef = collection(db, 'forecasts');
@@ -1781,7 +1787,7 @@ export const dbService = {
   },
 
   async loadCustomStageFixture(customMatches: any[]): Promise<void> {
-    if (isFirebaseActive && db) {
+    if (shouldUseFirebase()) {
       try {
         // 1. Delete all forecasts
         const forecastsRef = collection(db, 'forecasts');
