@@ -1,25 +1,25 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import {
-  getFirestore,
-  collection,
-  doc,
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
   getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
+  getDocs, 
+  setDoc, 
+  updateDoc, 
   addDoc,
   deleteDoc,
-  query,
-  where,
-  orderBy,
+  query, 
+  where, 
+  orderBy, 
   onSnapshot,
   Timestamp,
   getDocFromServer,
@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { SoccerMatch, UserProfile, UserForecast, Standing } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry } from './worldCupData';
 
 // Support Vercel / dynamic environment variables overrides
 const globalEnv = (import.meta as any).env || {};
@@ -48,19 +49,19 @@ export const activeConfig = {
   storageBucket: envConfig.storageBucket || firebaseConfig?.storageBucket,
   messagingSenderId: envConfig.messagingSenderId || firebaseConfig?.messagingSenderId,
   appId: envConfig.appId || firebaseConfig?.appId,
-  firestoreDatabaseId: envConfig.firestoreDatabaseId
-    ? envConfig.firestoreDatabaseId
+  firestoreDatabaseId: envConfig.firestoreDatabaseId 
+    ? envConfig.firestoreDatabaseId 
     : (
-      (envConfig.projectId && envConfig.projectId !== firebaseConfig?.projectId)
-        ? undefined
-        : firebaseConfig?.firestoreDatabaseId
-    ),
+        (envConfig.projectId && envConfig.projectId !== firebaseConfig?.projectId) 
+          ? undefined 
+          : firebaseConfig?.firestoreDatabaseId
+      ),
 };
 
 // Detect if real Firebase is configured
-export const isFirebaseActive =
-  activeConfig &&
-  activeConfig.apiKey &&
+export const isFirebaseActive = 
+  activeConfig && 
+  activeConfig.apiKey && 
   activeConfig.apiKey !== 'placeholder' &&
   activeConfig.projectId !== 'placeholder';
 
@@ -72,7 +73,7 @@ if (isFirebaseActive) {
   try {
     app = getApps().length === 0 ? initializeApp(activeConfig) : getApp();
     auth = getAuth(app);
-    db = activeConfig.firestoreDatabaseId
+    db = activeConfig.firestoreDatabaseId 
       ? getFirestore(app, activeConfig.firestoreDatabaseId)
       : getFirestore(app);
 
@@ -263,17 +264,17 @@ export const dbService = {
             // Get user profile from firestore
             const userDocRef = doc(db, 'users', user.uid);
             let userSnap = await getDoc(userDocRef);
-
+            
             let profile: UserProfile;
             const isBootstrappedAdmin = user.email === 'darigles1@gmail.com';
-
+            
             if (userSnap.exists()) {
               const data = userSnap.data();
-              const createdAt = data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
+              const createdAt = data.createdAt instanceof Timestamp 
+                ? data.createdAt.toDate().toISOString() 
                 : (data.createdAt || new Date().toISOString());
-              const updatedAt = data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate().toISOString()
+              const updatedAt = data.updatedAt instanceof Timestamp 
+                ? data.updatedAt.toDate().toISOString() 
                 : data.updatedAt;
 
               profile = {
@@ -282,7 +283,7 @@ export const dbService = {
                 createdAt,
                 updatedAt
               } as UserProfile;
-
+              
               // Ensure backend admin aligns with the boostrapped rule
               if (isBootstrappedAdmin && !profile.isAdmin) {
                 profile.isAdmin = true;
@@ -299,9 +300,9 @@ export const dbService = {
                 isAdmin: isBootstrappedAdmin,
                 createdAt: createdAtTimestamp
               };
-
+              
               await setDoc(userDocRef, profilePayload);
-
+              
               // Register also in admins collection if admin
               if (isBootstrappedAdmin) {
                 await setDoc(doc(db, 'admins', user.uid), {
@@ -341,7 +342,7 @@ export const dbService = {
       } else {
         callback(null);
       }
-      return () => { }; // return unsubscribing function
+      return () => {}; // return unsubscribing function
     }
   },
 
@@ -351,19 +352,19 @@ export const dbService = {
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
+      
       const isBootstrappedAdmin = user.email === 'darigles1@gmail.com';
       const userDocRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userDocRef);
-
+      
       let profile: UserProfile;
       if (userSnap.exists()) {
         const data = userSnap.data();
-        const createdAt = data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
+        const createdAt = data.createdAt instanceof Timestamp 
+          ? data.createdAt.toDate().toISOString() 
           : (data.createdAt || new Date().toISOString());
-        const updatedAt = data.updatedAt instanceof Timestamp
-          ? data.updatedAt.toDate().toISOString()
+        const updatedAt = data.updatedAt instanceof Timestamp 
+          ? data.updatedAt.toDate().toISOString() 
           : data.updatedAt;
 
         profile = {
@@ -429,7 +430,7 @@ export const dbService = {
   async createMockUser(name: string, email: string): Promise<UserProfile> {
     const list = getLocalData('users', SEED_USERS);
     const emailLower = email.toLowerCase();
-
+    
     // Check if exists
     const existingUser = list.find(u => u.email.toLowerCase() === emailLower);
     if (existingUser) {
@@ -483,6 +484,7 @@ export const dbService = {
             homeScore: data.homeScore ?? null,
             awayScore: data.awayScore ?? null,
             status: data.status,
+            phase: data.phase || 'grupos',
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
           });
@@ -495,13 +497,13 @@ export const dbService = {
       // Local implementation
       const matches = getLocalData('matches', SEED_MATCHES);
       // Sort matches
-      const sorted = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+      const sorted = [...matches].sort((a,b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
       callback(sorted);
-
+      
       // Return unsubscription wrapper
       const listener = () => {
         const updated = getLocalData('matches', SEED_MATCHES);
-        callback([...updated].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()));
+        callback([...updated].sort((a,b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()));
       };
       window.addEventListener('prode_db_updated', listener);
       return () => {
@@ -527,34 +529,54 @@ export const dbService = {
     }
   },
 
-  async addMatch(homeTeam: string, awayTeam: string, matchDateISO: string): Promise<string> {
+  async addMatch(homeTeam: string, awayTeam: string, matchDateISO: string, phase: string = 'grupos', customId?: string): Promise<string> {
     const matchData = {
       homeTeam,
       awayTeam,
       matchDate: isFirebaseActive ? Timestamp.fromDate(new Date(matchDateISO)) : matchDateISO,
       status: 'pending' as const,
+      phase,
       createdAt: isFirebaseActive ? Timestamp.now() : new Date().toISOString()
     };
 
     if (isFirebaseActive && db) {
       try {
-        const docRef = await addDoc(collection(db, 'matches'), matchData);
-        return docRef.id;
+        if (customId) {
+          const docRef = doc(db, 'matches', customId);
+          await setDoc(docRef, matchData, { merge: true });
+          return customId;
+        } else {
+          const docRef = await addDoc(collection(db, 'matches'), matchData);
+          return docRef.id;
+        }
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, 'matches');
         throw err;
       }
     } else {
       const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
-      const newId = `match-${Date.now()}`;
-      matches.push({
-        id: newId,
-        homeTeam,
-        awayTeam,
-        matchDate: matchDateISO,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
+      const newId = customId || `match-${Date.now()}`;
+      
+      const existingIndex = matches.findIndex(m => m.id === newId);
+      if (existingIndex > -1) {
+        matches[existingIndex] = {
+          ...matches[existingIndex],
+          homeTeam,
+          awayTeam,
+          matchDate: matchDateISO,
+          phase
+        };
+      } else {
+        matches.push({
+          id: newId,
+          homeTeam,
+          awayTeam,
+          matchDate: matchDateISO,
+          status: 'pending',
+          phase,
+          createdAt: new Date().toISOString()
+        });
+      }
       setLocalData('matches', matches);
       window.dispatchEvent(new Event('prode_db_updated'));
       return newId;
@@ -569,11 +591,11 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp
-            ? data.updatedAt.toDate().toISOString()
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
             : data.updatedAt;
 
           forecasts.push({
@@ -613,11 +635,11 @@ export const dbService = {
         const forecasts: UserForecast[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp
-            ? data.updatedAt.toDate().toISOString()
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
             : data.updatedAt;
 
           forecasts.push({
@@ -649,11 +671,11 @@ export const dbService = {
   },
 
   async saveForecast(
-    userId: string,
-    userName: string,
-    userEmail: string,
-    matchId: string,
-    homeScore: number,
+    userId: string, 
+    userName: string, 
+    userEmail: string, 
+    matchId: string, 
+    homeScore: number, 
     awayScore: number
   ): Promise<void> {
     const forecastId = `${userId}_${matchId}`;
@@ -671,7 +693,7 @@ export const dbService = {
       try {
         const forecastRef = doc(db, 'forecasts', forecastId);
         const forecastSnap = await getDoc(forecastRef);
-
+        
         if (forecastSnap.exists()) {
           // Rule asserts only homeScore, awayScore, updatedAt can be modified
           await updateDoc(forecastRef, {
@@ -693,7 +715,7 @@ export const dbService = {
     } else {
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
       const idx = forecasts.findIndex(f => f.userId === userId && f.matchId === matchId);
-
+      
       if (idx > -1) {
         forecasts[idx].homeScore = Number(homeScore);
         forecasts[idx].awayScore = Number(awayScore);
@@ -816,18 +838,18 @@ export const dbService = {
         users = [];
         usersSnapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp
-            ? data.updatedAt.toDate().toISOString()
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
             : data.updatedAt;
 
-          users.push({
-            ...data,
+          users.push({ 
+            ...data, 
             createdAt,
             updatedAt,
-            uid: doc.id
+            uid: doc.id 
           } as UserProfile);
         });
         usersLoaded = true;
@@ -840,11 +862,11 @@ export const dbService = {
         forecasts = [];
         forecastsSnapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp
-            ? data.updatedAt.toDate().toISOString()
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
             : data.updatedAt;
 
           forecasts.push({
@@ -868,7 +890,7 @@ export const dbService = {
       // Offline simulation
       const users = getLocalData<UserProfile>('users', SEED_USERS);
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
-
+      
       const standings = computeStandings(users, forecasts);
       callback(standings);
 
@@ -888,18 +910,18 @@ export const dbService = {
         const users: UserProfile[] = [];
         snapshot.forEach(doc => {
           const data = doc.data();
-          const createdAt = data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate().toISOString()
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
             : (data.createdAt || new Date().toISOString());
-          const updatedAt = data.updatedAt instanceof Timestamp
-            ? data.updatedAt.toDate().toISOString()
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
             : data.updatedAt;
 
-          users.push({
-            ...data,
+          users.push({ 
+            ...data, 
             createdAt,
             updatedAt,
-            uid: doc.id
+            uid: doc.id 
           } as UserProfile);
         });
         callback(users);
@@ -934,7 +956,7 @@ export const dbService = {
           updatedAt: new Date().toISOString()
         };
         setLocalData('users', users);
-
+        
         // Update current user locally if it's the current user
         const currentUserStr = localStorage.getItem('prode_current_user');
         if (currentUserStr) {
@@ -947,7 +969,7 @@ export const dbService = {
             }));
           }
         }
-
+        
         window.dispatchEvent(new Event('prode_db_updated'));
       }
     }
@@ -992,7 +1014,7 @@ export const dbService = {
         const forecastsRef = collection(db, 'forecasts');
         const forecastsSnap = await getDocs(forecastsRef);
         const userForecasts: { [userId: string]: any[] } = {};
-
+        
         let batch = writeBatch(db);
         let writeCount = 0;
 
@@ -1009,7 +1031,7 @@ export const dbService = {
           const fData = fDoc.data();
           const match = matchesMap[fData.matchId];
           const userId = fData.userId;
-
+          
           if (!userId) continue;
 
           if (!userForecasts[userId]) {
@@ -1065,11 +1087,11 @@ export const dbService = {
         // 3. For each user, sum points and update their profile only if points actually changed!
         const usersRef = collection(db, 'users');
         const usersSnap = await getDocs(usersRef);
-
+        
         for (const uDoc of usersSnap.docs) {
           const userId = uDoc.id;
           const forecasts = userForecasts[userId] || [];
-
+          
           let totalPoints = 0;
           forecasts.forEach(f => {
             if (f.pointsEarned !== null && f.pointsEarned !== undefined) {
@@ -1140,7 +1162,7 @@ export const dbService = {
         });
 
         localStorage.setItem('prode_users', JSON.stringify(users));
-
+        
         // Update session if currently logged in
         const currentUser = localStorage.getItem('prode_current_user');
         if (currentUser) {
@@ -1159,6 +1181,720 @@ export const dbService = {
     } catch (err) {
       console.error('Error syncing user forecasts & points:', err);
       return { success: false, message: 'Ocurrió un error al intentar sincronizar.' };
+    }
+  },
+
+  async clearKnockoutMatches(phase: string): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        const qSnap = await getDocs(query(collection(db, 'matches'), where('phase', '==', phase)));
+        for (const docSnap of qSnap.docs) {
+          await deleteDoc(doc(db, 'matches', docSnap.id));
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `matches-${phase}`);
+        throw err;
+      }
+    } else {
+      const localMatches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      const filtered = localMatches.filter(m => m.phase !== phase);
+      setLocalData('matches', filtered);
+    }
+    window.dispatchEvent(new Event('prode_db_updated'));
+  },
+
+  async generateKnockoutMatches(currentMatches: SoccerMatch[], mode: 'dynamic' | 'placeholder', targetPhase: string = '16avos'): Promise<{ success: boolean; count: number; message: string }> {
+    let pendingCount = 0;
+    try {
+      // 1. Fetch current existing matches of targetPhase to reuse their IDs (and save predictions)
+      let existingMatchesOfPhase: SoccerMatch[] = [];
+      if (isFirebaseActive && db) {
+        try {
+          const qSnap = await getDocs(query(collection(db, 'matches'), where('phase', '==', targetPhase)));
+          existingMatchesOfPhase = qSnap.docs.map(docSnap => {
+            const data = docSnap.data();
+            let mDate = '';
+            if (data.matchDate instanceof Timestamp) {
+              mDate = data.matchDate.toDate().toISOString();
+            } else if (data.matchDate && data.matchDate.seconds !== undefined) {
+              mDate = new Date(data.matchDate.seconds * 1000).toISOString();
+            } else {
+              mDate = data.matchDate || '';
+            }
+            return {
+              id: docSnap.id,
+              homeTeam: data.homeTeam || '',
+              awayTeam: data.awayTeam || '',
+              matchDate: mDate,
+              status: data.status || 'pending',
+              phase: targetPhase,
+              createdAt: data.createdAt || new Date().toISOString()
+            } as SoccerMatch;
+          });
+        } catch (err) {
+          console.error(`Error fetching existing ${targetPhase} matches from Firebase:`, err);
+          existingMatchesOfPhase = currentMatches.filter(m => m.phase === targetPhase);
+        }
+      } else {
+        const localMatches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+        existingMatchesOfPhase = localMatches.filter(m => m.phase === targetPhase);
+      }
+
+      // Sort existing matches to map them to the pairings in a stable order
+      existingMatchesOfPhase.sort((a, b) => {
+        const parseNum = (idStr: string) => {
+          const m = idStr.match(new RegExp(`${targetPhase}_(\\d+)`));
+          return m ? parseInt(m[1], 10) : null;
+        };
+        const numA = parseNum(a.id);
+        const numB = parseNum(b.id);
+        if (numA !== null && numB !== null) return numA - numB;
+        if (numA !== null) return -1;
+        if (numB !== null) return 1;
+        return (a.matchDate || '').localeCompare(b.matchDate || '') || a.id.localeCompare(b.id);
+      });
+
+      let pairings: { home: string; away: string }[] = [];
+
+      if (targetPhase === '16avos') {
+        if (mode === 'placeholder') {
+          pairings = [
+            { home: "1° Grupo A 🏆", away: "Mejor 3° Grupo C/D/E/F 🏆" },
+            { home: "2° Grupo A 🏆", away: "2° Grupo B 🏆" },
+            { home: "1° Grupo B 🏆", away: "Mejor 3° Grupo A/C/D 🏆" },
+            { home: "1° Grupo C 🏆", away: "2° Grupo D 🏆" },
+            { home: "1° Grupo D 🏆", away: "Mejor 3° Grupo B/E/F 🏆" },
+            { home: "2° Grupo C 🏆", away: "2° Grupo E 🏆" },
+            { home: "1° Grupo E 🏆", away: "Mejor 3° Grupo A/D/F 🏆" },
+            { home: "1° Grupo F 🏆", away: "2° Grupo G 🏆" },
+            { home: "1° Grupo G 🏆", away: "Mejor 3° Grupo B/C/H 🏆" },
+            { home: "2° Grupo F 🏆", away: "2° Grupo H 🏆" },
+            { home: "1° Grupo H 🏆", away: "Mejor 3° Grupo A/I/J 🏆" },
+            { home: "1° Grupo I 🏆", away: "2° Grupo J 🏆" },
+            { home: "1° Grupo J 🏆", away: "Mejor 3° Grupo G/K/L 🏆" },
+            { home: "2° Grupo I 🏆", away: "2° Grupo K 🏆" },
+            { home: "1° Grupo K 🏆", away: "Mejor 3° Grupo E/H/L 🏆" },
+            { home: "1° Grupo L 🏆", away: "2° Grupo A/B 🏆" }
+          ];
+        } else {
+          // Build dynamic group standings
+          const teamToGroup: Record<string, string> = {};
+          OFFICIAL_WORLD_STAGE_MATCHES.forEach(m => {
+            teamToGroup[m.local] = m.fase;
+            teamToGroup[m.visitante] = m.fase;
+          });
+
+          const cleanTeams = Object.keys(teamToGroup);
+          const standings: Record<string, { team: string; clean: string; pts: number; gf: number; ga: number; gd: number; gp: number; group: string }> = {};
+
+          cleanTeams.forEach(clean => {
+            const flag = getFlagForCountry ? getFlagForCountry(clean) : '';
+            standings[clean] = {
+              team: `${clean} ${flag}`.trim(),
+              clean,
+              pts: 0,
+              gf: 0,
+              ga: 0,
+              gd: 0,
+              gp: 0,
+              group: teamToGroup[clean]
+            };
+          });
+
+          const findCleanName = (name: string): string => {
+            if (!name) return "";
+            const removed = name.replace(/[^\p{L}\s\.\-]/gu, '').replace(/\s+/g, ' ').trim();
+            const match = cleanTeams.find(t => t.toLowerCase() === removed.toLowerCase());
+            return match || removed;
+          };
+
+          const groupMatches = currentMatches.filter(m => (m.phase || 'grupos') === 'grupos');
+          pendingCount = groupMatches.filter(m => m.status !== 'finished').length;
+
+          groupMatches.forEach(m => {
+            if (m.status === 'finished' && m.homeScore !== null && m.homeScore !== undefined && m.awayScore !== null && m.awayScore !== undefined) {
+              const hClean = findCleanName(m.homeTeam);
+              const aClean = findCleanName(m.awayTeam);
+
+              const hRec = standings[hClean];
+              const aRec = standings[aClean];
+
+              if (hRec && aRec) {
+                const hs = Number(m.homeScore);
+                const as = Number(m.awayScore);
+
+                hRec.gp += 1;
+                aRec.gp += 1;
+                hRec.gf += hs;
+                hRec.ga += as;
+                aRec.gf += as;
+                aRec.ga += hs;
+                hRec.gd = hRec.gf - hRec.ga;
+                aRec.gd = aRec.gf - aRec.ga;
+
+                if (hs > as) {
+                  hRec.pts += 3;
+                } else if (as > hs) {
+                  aRec.pts += 3;
+                } else {
+                  hRec.pts += 1;
+                  aRec.pts += 1;
+                }
+              }
+            }
+          });
+
+          const groupsMap: Record<string, typeof standings[string][]> = {};
+          Object.values(standings).forEach(rec => {
+            if (!groupsMap[rec.group]) {
+              groupsMap[rec.group] = [];
+            }
+            groupsMap[rec.group].push(rec);
+          });
+
+          const firsts: string[] = [];
+          const seconds: string[] = [];
+          const thirds: typeof standings[string][] = [];
+
+          const groupNamesAlphabetical = [
+            "Grupo A", "Grupo B", "Grupo C", "Grupo D", "Grupo E", "Grupo F",
+            "Grupo G", "Grupo H", "Grupo I", "Grupo J", "Grupo K", "Grupo L"
+          ];
+
+          groupNamesAlphabetical.forEach(gName => {
+            const list = (groupsMap[gName] || []).sort((a, b) => {
+              if (b.pts !== a.pts) return b.pts - a.pts;
+              if (b.gd !== a.gd) return b.gd - a.gd;
+              if (b.gf !== a.gf) return b.gf - a.gf;
+              return a.clean.localeCompare(b.clean);
+            });
+
+            const matchesInGroup = groupMatches.filter(m => {
+              const hClean = findCleanName(m.homeTeam);
+              return teamToGroup[hClean] === gName;
+            });
+            const groupFinished = matchesInGroup.length > 0 && matchesInGroup.every(m => m.status === 'finished');
+
+            if (groupFinished) {
+              if (list[0]) firsts.push(list[0].team);
+              if (list[1]) seconds.push(list[1].team);
+              if (list[2]) thirds.push(list[2]);
+            } else {
+              firsts.push(`1° ${gName} 🏆`);
+              seconds.push(`2° ${gName} 🏆`);
+              thirds.push({
+                team: `3° ${gName} 🏆`,
+                clean: `3_third_${gName}`,
+                pts: -1,
+                gd: -100,
+                gf: -100,
+                ga: 100,
+                gp: 0,
+                group: gName
+              });
+            }
+          });
+
+          const sortedThirds = thirds.sort((a, b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.gd !== a.gd) return b.gd - a.gd;
+            if (b.gf !== a.gf) return b.gf - a.gf;
+            return a.clean.localeCompare(b.clean);
+          });
+
+          const bestThirdsOverall = sortedThirds.slice(0, 8);
+
+          // Helper functions with fallback to group placeholder
+          const getFirstOfGroup = (gName: string, idx: number): string => {
+            return firsts[idx] || `1° ${gName} 🏆`;
+          };
+
+          const getSecondOfGroup = (gName: string, idx: number): string => {
+            return seconds[idx] || `2° ${gName} 🏆`;
+          };
+
+          const assignedThirdsSet = new Set<string>();
+
+          const getBestThirdOf = (groups: string[]): string => {
+            const found = bestThirdsOverall.find(t => 
+              groups.includes(t.group) && 
+              !assignedThirdsSet.has(t.clean) &&
+              !t.team.includes('3°') // Is a real qualified team
+            );
+            if (found) {
+              assignedThirdsSet.add(found.clean);
+              return found.team;
+            }
+            const groupLetters = groups.map(g => g.replace("Grupo ", "")).join("/");
+            return `Mejor 3° Grupo ${groupLetters} 🏆`;
+          };
+
+          const getSecondOfGroupAB = (): string => {
+            const grBFinished = (groupMatches.filter(m => {
+              const hClean = findCleanName(m.homeTeam);
+              return teamToGroup[hClean] === 'Grupo B';
+            }).length > 0) && groupMatches.filter(m => {
+              const hClean = findCleanName(m.homeTeam);
+              return teamToGroup[hClean] === 'Grupo B';
+            }).every(m => m.status === 'finished');
+
+            const grAFinished = (groupMatches.filter(m => {
+              const hClean = findCleanName(m.homeTeam);
+              return teamToGroup[hClean] === 'Grupo A';
+            }).length > 0) && groupMatches.filter(m => {
+              const hClean = findCleanName(m.homeTeam);
+              return teamToGroup[hClean] === 'Grupo A';
+            }).every(m => m.status === 'finished');
+
+            if (grBFinished && seconds[1] && !seconds[1].includes('Grupo B')) {
+              return seconds[1];
+            }
+            if (grAFinished && seconds[0] && !seconds[0].includes('Grupo A')) {
+              return seconds[0];
+            }
+            return "2° Grupo A/B 🏆";
+          };
+
+          pairings = [
+            { home: getFirstOfGroup("Grupo A", 0), away: getBestThirdOf(['Grupo C', 'Grupo D', 'Grupo E', 'Grupo F']) },
+            { home: getSecondOfGroup("Grupo A", 0), away: getSecondOfGroup("Grupo B", 1) },
+            { home: getFirstOfGroup("Grupo B", 1), away: getBestThirdOf(['Grupo A', 'Grupo C', 'Grupo D']) },
+            { home: getFirstOfGroup("Grupo C", 2), away: getSecondOfGroup("Grupo D", 3) },
+            { home: getFirstOfGroup("Grupo D", 3), away: getBestThirdOf(['Grupo B', 'Grupo E', 'Grupo F']) },
+            { home: getSecondOfGroup("Grupo C", 2), away: getSecondOfGroup("Grupo E", 4) },
+            { home: getFirstOfGroup("Grupo E", 4), away: getBestThirdOf(['Grupo A', 'Grupo D', 'Grupo F']) },
+            { home: getFirstOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo G", 6) },
+            { home: getFirstOfGroup("Grupo G", 6), away: getBestThirdOf(['Grupo B', 'Grupo C', 'Grupo H']) },
+            { home: getSecondOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo H", 7) },
+            { home: getFirstOfGroup("Grupo H", 7), away: getBestThirdOf(['Grupo A', 'Grupo I', 'Grupo J']) },
+            { home: getFirstOfGroup("Grupo I", 8), away: getSecondOfGroup("Grupo J", 9) },
+            { home: getFirstOfGroup("Grupo J", 9), away: getBestThirdOf(['Grupo G', 'Grupo K', 'Grupo L']) },
+            { home: getSecondOfGroup("Grupo I", 8), away: getSecondOfGroup("Grupo K", 10) },
+            { home: getFirstOfGroup("Grupo K", 10), away: getBestThirdOf(['Grupo E', 'Grupo H', 'Grupo L']) },
+            { home: getFirstOfGroup("Grupo L", 11), away: getSecondOfGroupAB() }
+          ];
+        }
+      } else {
+        // Generic logic for 8vos, cuartos, semis, final
+        let sourcePhase = '';
+        let pairsCount = 0;
+        let sourceLabel = '';
+        if (targetPhase === '8vos') { sourcePhase = '16avos'; pairsCount = 8; sourceLabel = '16avos'; }
+        else if (targetPhase === 'cuartos') { sourcePhase = '8vos'; pairsCount = 4; sourceLabel = '8vos'; }
+        else if (targetPhase === 'semis') { sourcePhase = 'cuartos'; pairsCount = 2; sourceLabel = '8vos (Cuartos)'; }
+        else if (targetPhase === 'final') { sourcePhase = 'semis'; pairsCount = 1; sourceLabel = '8vos (Semis)'; }
+
+        const getWinnerOfMatch = (idxOneBased: number, fallbackLabel: string): string => {
+          if (mode === 'placeholder') return fallbackLabel;
+          const parentMatchId = `${sourcePhase}_${idxOneBased}`;
+          const m = currentMatches.find(x => x.id === parentMatchId);
+          if (m && m.status === 'finished' && m.homeScore !== null && m.awayScore !== null) {
+            if (m.homeScore > m.awayScore) return m.homeTeam;
+            if (m.awayScore > m.homeScore) return m.awayTeam;
+            return `Ganador ${m.homeTeam} / ${m.awayTeam}`;
+          }
+          return fallbackLabel;
+        };
+
+        for (let j = 0; j < pairsCount; j++) {
+          const homeIdx = 2 * j + 1;
+          const awayIdx = 2 * j + 2;
+          const homeTag = getWinnerOfMatch(homeIdx, `Ganador M${homeIdx} de ${sourcePhase.toUpperCase()} 🏆`);
+          const awayTag = getWinnerOfMatch(awayIdx, `Ganador M${awayIdx} de ${sourcePhase.toUpperCase()} 🏆`);
+          pairings.push({ home: homeTag, away: awayTag });
+        }
+      }
+
+      // Safe date calculation to guarantee no NaN values
+      let lastSourceMatchDate = Date.now();
+      const prevPhase = targetPhase === '16avos' ? 'grupos' : (targetPhase === '8vos' ? '16avos' : (targetPhase === 'cuartos' ? '8vos' : (targetPhase === 'semis' ? 'cuartos' : 'semis')));
+      try {
+        const times = currentMatches
+          .filter(m => m.phase === prevPhase && m.matchDate)
+          .map(m => {
+            let t = Date.now();
+            if (typeof m.matchDate === 'string') {
+              t = new Date(m.matchDate).getTime();
+            } else if (m.matchDate && typeof (m.matchDate as any).toDate === 'function') {
+              t = (m.matchDate as any).toDate().getTime();
+            } else if (m.matchDate && (m.matchDate as any).seconds !== undefined) {
+              t = (m.matchDate as any).seconds * 1000;
+            } else {
+              t = new Date(m.matchDate as any).getTime();
+            }
+            return isNaN(t) ? Date.now() : t;
+          });
+        if (times.length > 0) {
+          lastSourceMatchDate = Math.max(...times);
+        }
+      } catch (err) {
+        console.error("Error calculating lastSourceMatchDate safely:", err);
+      }
+
+      const baseStartMillis = lastSourceMatchDate > Date.now()
+        ? lastSourceMatchDate + 1000 * 60 * 60 * 24
+        : Date.now() + 1000 * 60 * 60 * 24;
+
+      let createdCounter = 0;
+      for (let i = 0; i < pairings.length; i++) {
+        const pair = pairings[i];
+        const dayOffset = Math.floor(i / 4);
+        const hourOffset = 12 + (i % 4) * 3;
+        
+        const dateObj = new Date(baseStartMillis);
+        dateObj.setDate(dateObj.getDate() + dayOffset);
+        dateObj.setHours(hourOffset, 0, 0, 0);
+
+        // Reuse existing match ID if available at index i to preserve user predictions!
+        const existingMatch = existingMatchesOfPhase[i];
+        
+        if (existingMatch) {
+          if (isFirebaseActive && db) {
+            await setDoc(doc(db, 'matches', existingMatch.id), {
+              homeTeam: pair.home,
+              awayTeam: pair.away,
+              matchDate: Timestamp.fromDate(new Date(dateObj.toISOString()))
+            }, { merge: true });
+          } else {
+            const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+            const idx = matches.findIndex(m => m.id === existingMatch.id);
+            if (idx > -1) {
+              matches[idx] = {
+                ...matches[idx],
+                homeTeam: pair.home,
+                awayTeam: pair.away,
+                matchDate: dateObj.toISOString()
+              };
+              setLocalData('matches', matches);
+            }
+          }
+        } else {
+          const stableId = `${targetPhase}_${i + 1}`;
+          await this.addMatch(pair.home, pair.away, dateObj.toISOString(), targetPhase, stableId);
+        }
+        createdCounter++;
+      }
+
+      // If there are excess existing matches (e.g. more than pairings length due to config changes), clean them up
+      if (existingMatchesOfPhase.length > pairings.length) {
+        for (let i = pairings.length; i < existingMatchesOfPhase.length; i++) {
+          const excessMatch = existingMatchesOfPhase[i];
+          if (isFirebaseActive && db) {
+            try {
+              await deleteDoc(doc(db, 'matches', excessMatch.id));
+            } catch (err) {
+              console.error(`Error deleting excess ${targetPhase} match:`, err);
+            }
+          } else {
+            const localMatches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+            const filtered = localMatches.filter(m => m.id !== excessMatch.id);
+            setLocalData('matches', filtered);
+          }
+        }
+      }
+
+      const phaseLabels: { [key: string]: string } = {
+        '16avos': '16avos de Final',
+        '8vos': '8vos de Final',
+        'cuartos': 'Cuartos de Final',
+        'semis': 'Semifinales',
+        'final': 'Gran Final'
+      };
+      const labelValue = phaseLabels[targetPhase] || targetPhase;
+
+      let msg = `¡Se actualizaron correctamente las ${createdCounter} llaves de ${labelValue}! Se cargaron los competidores correspondientes y tus pronósticos ya existen se mantuvieron 100% a salvo de forma exitosa.`;
+      if (targetPhase === '16avos' && mode === 'dynamic' && pendingCount > 0) {
+        msg = `⚠️ ¡Atención! Se calcularon las llaves de los 16avos de Final, pero se detectaron ${pendingCount} partidos de Fase de Grupos aún PENDIENTES de finalización en el sistema.\n\nPor este motivo, las selecciones de los grupos que aún no finalizaron se muestran provisoriamente como "1°" / "2°" de su grupo (esqueleto).\n\nUna vez cargues los resultados reales de esos partidos pendientes, volvé a hacer clic en "Calcular Clasificados Reales" para actualizar automáticamente los países correspondientes sin perder tus pronósticos ya cargados.`;
+      } else if (targetPhase === '16avos' && mode === 'dynamic') {
+        msg = `🎉 ¡Éxito total! Se calcularon y cargaron de forma perfecta las llaves de 16avos de Final con los países ya clasificados reales de cada uno de los grupos tras concluir la fase inicial.`;
+      }
+
+      window.dispatchEvent(new Event('prode_db_updated'));
+      return {
+        success: true,
+        count: createdCounter,
+        message: msg
+      };
+    } catch (e) {
+      console.error("Error generating knockout matches:", e);
+      return {
+        success: false,
+        count: 0,
+        message: 'Ocurrió un error al intentar crear las llaves del torneo.'
+      };
+    }
+  },
+
+  subscribeSettings(callback: (settingsData: { enabledPhases: string[] }) => void) {
+    if (isFirebaseActive && db) {
+      const docRef = doc(db, 'settings', 'config');
+      return onSnapshot(docRef, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          callback({
+            enabledPhases: data.enabledPhases || ['grupos']
+          });
+        } else {
+          setDoc(docRef, { enabledPhases: ['grupos'] })
+            .then(() => callback({ enabledPhases: ['grupos'] }))
+            .catch(err => console.error("Error creating default settings:", err));
+        }
+      }, (error) => {
+        console.error("Error subscribing to settings:", error);
+        callback({ enabledPhases: ['grupos'] });
+      });
+    } else {
+      const getLocalSettings = () => {
+        const stored = localStorage.getItem('prode_enabled_phases');
+        if (stored) {
+          try {
+            return { enabledPhases: JSON.parse(stored) };
+          } catch (e) {}
+        }
+        return { enabledPhases: ['grupos'] };
+      };
+      
+      callback(getLocalSettings());
+
+      const listener = () => {
+        callback(getLocalSettings());
+      };
+      window.addEventListener('prode_db_updated', listener);
+      return () => {
+        window.removeEventListener('prode_db_updated', listener);
+      };
+    }
+  },
+
+  async updateEnabledPhases(enabledPhases: string[]): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        const docRef = doc(db, 'settings', 'config');
+        await setDoc(docRef, { enabledPhases }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, 'settings/config');
+      }
+    } else {
+      localStorage.setItem('prode_enabled_phases', JSON.stringify(enabledPhases));
+      window.dispatchEvent(new Event('prode_db_updated'));
+    }
+  },
+
+  async resetTournament(): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        // 1. Delete all forecasts
+        const forecastsRef = collection(db, 'forecasts');
+        const forecastsSnap = await getDocs(forecastsRef);
+        
+        let batch = writeBatch(db);
+        let writeCount = 0;
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
+        for (const docSnap of forecastsSnap.docs) {
+          batch.delete(doc(db, 'forecasts', docSnap.id));
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // 2. Set all users' points to 0
+        const usersRef = collection(db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        for (const docSnap of usersSnap.docs) {
+          batch.update(doc(db, 'users', docSnap.id), {
+            points: 0,
+            updatedAt: Timestamp.now()
+          });
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // 3. Reset matches: keep 'grupos', delete knockouts
+        const matchesRef = collection(db, 'matches');
+        const matchesSnap = await getDocs(matchesRef);
+        for (const docSnap of matchesSnap.docs) {
+          const data = docSnap.data();
+          const p = data.phase || 'grupos';
+          if (p === 'grupos' || p.toLowerCase().startsWith('grupo')) {
+            batch.update(doc(db, 'matches', docSnap.id), {
+              homeScore: null,
+              awayScore: null,
+              status: 'pending',
+              updatedAt: Timestamp.now()
+            });
+            writeCount++;
+            await checkAndCommitBatch();
+          } else {
+            batch.delete(doc(db, 'matches', docSnap.id));
+            writeCount++;
+            await checkAndCommitBatch();
+          }
+        }
+
+        // 4. Reset enabled phases to just 'grupos'
+        const settingsRef = doc(db, 'settings', 'config');
+        batch.set(settingsRef, { enabledPhases: ['grupos'] }, { merge: true });
+        writeCount++;
+
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'reset-tournament');
+        throw err;
+      }
+    } else {
+      // Local Storage Fallback simulation
+      setLocalData('forecasts', []);
+
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      users.forEach(u => {
+        u.points = 0;
+        u.updatedAt = new Date().toISOString();
+      });
+      setLocalData('users', users);
+
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      const filteredMatches = matches
+        .filter(m => {
+          const p = m.phase || 'grupos';
+          return p === 'grupos' || p.toLowerCase().startsWith('grupo');
+        })
+        .map(m => ({
+          ...m,
+          homeScore: null,
+          awayScore: null,
+          status: 'pending' as const,
+          updatedAt: new Date().toISOString()
+        }));
+      setLocalData('matches', filteredMatches);
+
+      localStorage.setItem('prode_enabled_phases', JSON.stringify(['grupos']));
+      window.dispatchEvent(new Event('prode_db_updated'));
+    }
+  },
+
+  async loadCustomStageFixture(customMatches: any[]): Promise<void> {
+    if (isFirebaseActive && db) {
+      try {
+        // 1. Delete all forecasts
+        const forecastsRef = collection(db, 'forecasts');
+        const forecastsSnap = await getDocs(forecastsRef);
+        
+        let batch = writeBatch(db);
+        let writeCount = 0;
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
+        for (const docSnap of forecastsSnap.docs) {
+          batch.delete(doc(db, 'forecasts', docSnap.id));
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // 2. Set all users' points to 0
+        const usersRef = collection(db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        for (const docSnap of usersSnap.docs) {
+          batch.update(doc(db, 'users', docSnap.id), {
+            points: 0,
+            updatedAt: Timestamp.now()
+          });
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // 3. Delete all old matches
+        const matchesRef = collection(db, 'matches');
+        const matchesSnap = await getDocs(matchesRef);
+        for (const docSnap of matchesSnap.docs) {
+          batch.delete(doc(db, 'matches', docSnap.id));
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // 4. Reset enabled phases to just 'grupos'
+        const settingsRef = doc(db, 'settings', 'config');
+        batch.set(settingsRef, { enabledPhases: ['grupos'] }, { merge: true });
+        writeCount++;
+        await checkAndCommitBatch();
+
+        // 5. Add new custom matches of phase 'grupos'
+        for (const item of customMatches) {
+          const mId = item.id || `match-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+          const mDocRef = doc(db, 'matches', mId);
+          
+          let mDate = new Date().toISOString();
+          if (item.matchDate) {
+            mDate = new Date(item.matchDate).toISOString();
+          } else if (item.date) {
+            mDate = new Date(item.date).toISOString();
+          }
+
+          const matchPayload = {
+            homeTeam: item.homeTeam,
+            awayTeam: item.awayTeam,
+            matchDate: Timestamp.fromDate(new Date(mDate)),
+            status: 'pending',
+            phase: item.phase || 'grupos',
+            createdAt: Timestamp.now()
+          };
+          
+          batch.set(mDocRef, matchPayload);
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'load-custom-fixture');
+        throw err;
+      }
+    } else {
+      // Local Storage Fallback simulation
+      setLocalData('forecasts', []);
+
+      const users = getLocalData<UserProfile>('users', SEED_USERS);
+      users.forEach(u => {
+        u.points = 0;
+        u.updatedAt = new Date().toISOString();
+      });
+      setLocalData('users', users);
+
+      const newMatchesList: SoccerMatch[] = customMatches.map((item, idx) => {
+        let mDate = new Date().toISOString();
+        if (item.matchDate) {
+          mDate = new Date(item.matchDate).toISOString();
+        } else if (item.date) {
+          mDate = new Date(item.date).toISOString();
+        }
+        return {
+          id: item.id || `match-${Date.now()}-${idx}`,
+          homeTeam: item.homeTeam,
+          awayTeam: item.awayTeam,
+          matchDate: mDate,
+          status: 'pending' as const,
+          phase: item.phase || 'grupos',
+          createdAt: new Date().toISOString()
+        };
+      });
+      setLocalData('matches', newMatchesList);
+
+      localStorage.setItem('prode_enabled_phases', JSON.stringify(['grupos']));
+      window.dispatchEvent(new Event('prode_db_updated'));
     }
   }
 };

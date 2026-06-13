@@ -50,6 +50,18 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "matchId", "homeScore", "awayScore", "createdAt"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Global tournament configurations managed by admins",
+      "type": "object",
+      "properties": {
+        "enabledPhases": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["enabledPhases"]
     }
   },
   "firestore": {
@@ -64,6 +76,10 @@
     "/forecasts/{forecastId}": {
       "schema": "Forecast",
       "description": "User forecasts for matches"
+    },
+    "/settings/{settingId}": {
+      "schema": "Config",
+      "description": "Global settings such as active tournament phases"
     }
   }
 }

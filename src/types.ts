@@ -20,6 +20,7 @@ export interface SoccerMatch {
   homeScore?: number | null; // Real result
   awayScore?: number | null; // Real result
   status: 'pending' | 'finished'; // Matches default to pending, finished once settled
+  phase?: string; // e.g., 'grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'
   createdAt: string;
   updatedAt?: string;
 }

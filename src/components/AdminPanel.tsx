@@ -10,10 +10,16 @@ import {
   Users, 
   Trash2, 
   Shield, 
-  ShieldOff 
+  ShieldOff,
+  Download,
+  Copy,
+  FileJson,
+  AlertTriangle,
+  UploadCloud
 } from 'lucide-react';
 import { SoccerMatch, UserProfile } from '../types';
 import { dbService } from '../lib/dbService';
+import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry } from '../lib/worldCupData';
 
 interface AdminPanelProps {
   currentUser?: UserProfile;
@@ -24,8 +30,11 @@ interface AdminPanelProps {
   prizes: { first: string; second: string; third: string };
   onUpdatePrizes: (newPrizes: { first: string; second: string; third: string }) => void;
   onLoadOfficialFixture?: () => Promise<void>;
+  onGenerateKnockout?: (mode: 'dynamic' | 'placeholder') => Promise<{ success: boolean; count: number; message: string }>;
   users?: UserProfile[];
   onUpdateUser?: (userId: string, updates: Partial<UserProfile>) => Promise<void>;
+  enabledPhases?: string[];
+  onUpdateEnabledPhases?: (phases: string[]) => Promise<void>;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -36,8 +45,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onUnsettleMatch,
   prizes,
   onUpdatePrizes,
+  onLoadOfficialFixture,
+  onGenerateKnockout,
   users = [],
-  onUpdateUser
+  onUpdateUser,
+  enabledPhases = ['grupos'],
+  onUpdateEnabledPhases
 }) => {
   // --- User Management List ---
   const [internalUsers, setInternalUsers] = useState<UserProfile[]>([]);
@@ -101,6 +114,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [prizeThird, setPrizeThird] = useState(prizes.third);
   const [prizeSuccess, setPrizeSuccess] = useState(false);
 
+  // Voting phase management states and handlers
+  const [updatingPhases, setUpdatingPhases] = useState(false);
+  const [phaseSuccess, setPhaseSuccess] = useState(false);
+
+  const phaseSequence = ['grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'];
+  const phaseLabels: { [key: string]: string } = {
+    grupos: 'Fase de Grupos 1️⃣',
+    '16avos': '16avos de Final ⚽',
+    '8vos': '8vos de Final 🛡️',
+    cuartos: 'Cuartos de Final 🏆',
+    semis: 'Semifinales ⭐',
+    final: 'Gran Final 🏅'
+  };
+
+  const handleEnableNextPhase = async () => {
+    if (!onUpdateEnabledPhases) return;
+    const nextPhase = phaseSequence.find(p => !enabledPhases.includes(p));
+    if (!nextPhase) {
+      alert('¡Todas las etapas ya se encuentran habilitadas para votación!');
+      return;
+    }
+
+    // Guard: prevent enabling a stage if matches have not been generated for it yet
+    if (nextPhase !== 'grupos') {
+      const hasMatches = matches.some(m => m.phase === nextPhase);
+      if (!hasMatches) {
+        const proceed = window.confirm(`⚠️ No se han encontrado partidos configurados/generados para la fase "${phaseLabels[nextPhase] || nextPhase}" en el sistema.\n\nNormalmente es aconsejable calcular y generar primero los cruces para evitar que los usuarios visualicen una pestaña vacía.\n\n¿Deseás habilitar la votación para esta fase de todas formas?`);
+        if (!proceed) return;
+      }
+    }
+
+    setUpdatingPhases(true);
+    setPhaseSuccess(false);
+    try {
+      const updated = [...enabledPhases, nextPhase];
+      await onUpdateEnabledPhases(updated);
+      setPhaseSuccess(true);
+      setTimeout(() => setPhaseSuccess(false), 3000);
+    } catch (e) {
+      console.error(e);
+      alert('Error habilitando siguiente fase');
+    } finally {
+      setUpdatingPhases(false);
+    }
+  };
+
+  const handleTogglePhase = async (phaseTag: string) => {
+    if (!onUpdateEnabledPhases) return;
+
+    // Guard: prevent enabling a stage if matches have not been generated for it yet
+    if (!enabledPhases.includes(phaseTag) && phaseTag !== 'grupos') {
+      const hasMatches = matches.some(m => m.phase === phaseTag);
+      if (!hasMatches) {
+        const proceed = window.confirm(`⚠️ No se han encontrado partidos configurados/generados para la fase "${phaseLabels[phaseTag] || phaseTag}" en el sistema.\n\nNormalmente es mejor generar las llaves primero para evitar que los usuarios visualicen un panel vacío o roto.\n\n¿Deseás habilitar la votación para esta fase de todas formas?`);
+        if (!proceed) return;
+      }
+    }
+
+    setUpdatingPhases(true);
+    setPhaseSuccess(false);
+    try {
+      let updated: string[];
+      if (enabledPhases.includes(phaseTag)) {
+        updated = enabledPhases.filter(p => p !== phaseTag);
+      } else {
+        updated = [...enabledPhases, phaseTag];
+      }
+      await onUpdateEnabledPhases(updated);
+      setPhaseSuccess(true);
+      setTimeout(() => setPhaseSuccess(false), 3000);
+    } catch (e) {
+      console.error(e);
+      alert('Error modificando estado de fase');
+    } finally {
+      setUpdatingPhases(false);
+    }
+  };
+
+  // Knockout stage generator states
+  const [generatingKnockout, setGeneratingKnockout] = useState(false);
+  const [knockoutFeedback, setKnockoutFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const handleSavePrizes = () => {
     onUpdatePrizes({
       first: prizeFirst,
@@ -111,11 +206,267 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setTimeout(() => setPrizeSuccess(false), 2500);
   };
 
+  const handleGenerateKnockoutStage = async (mode: 'dynamic' | 'placeholder') => {
+    if (!onGenerateKnockout) return;
+    setGeneratingKnockout(true);
+    setKnockoutFeedback(null);
+    try {
+      const res = await onGenerateKnockout(mode);
+      if (res.success) {
+        setKnockoutFeedback({ type: 'success', text: res.message });
+      } else {
+        setKnockoutFeedback({ type: 'error', text: res.message });
+      }
+    } catch (e: any) {
+      console.error(e);
+      setKnockoutFeedback({ type: 'error', text: 'Ocurrió un error inesperado al procesar las llaves.' });
+    } finally {
+      setGeneratingKnockout(false);
+    }
+  };
+
   // Score inputs for settling matches
   const [settleScores, setSettleScores] = useState<{ [matchId: string]: { home: string; away: string } }>({});
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [settleErr, setSettleErr] = useState<{ [matchId: string]: string }>({});
   const [settleSubTab, setSettleSubTab] = useState<'pending' | 'finished' | 'users'>('pending');
+
+  // Tournament Reset States
+  const [resetStep, setResetStep] = useState(0); // 0 = initial, 1 = first confirmation, 2 = second confirmation
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Custom JSON Upload States
+  const [customJsonText, setCustomJsonText] = useState('');
+  const [isUploadingJson, setIsUploadingJson] = useState(false);
+  const [jsonUploadFeedback, setJsonUploadFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const handleResetTournament = async () => {
+    setIsResetting(true);
+    setResetFeedback(null);
+    try {
+      await dbService.resetTournament();
+      setResetFeedback({ type: 'success', msg: '¡El torneo ha sido reiniciado por completo! Se eliminaron los pronósticos, los puntos y las fases finales, conservándose únicamente los encuentros de Fase de Grupos en estado pendiente.' });
+      setResetStep(0);
+    } catch (err: any) {
+      console.error(err);
+      setResetFeedback({ type: 'error', msg: `Error al reiniciar el torneo: ${err.message || err}` });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleUploadCustomFixtureJson = async (jsonStringToParse: string) => {
+    if (!jsonStringToParse.trim()) {
+      setJsonUploadFeedback({ type: 'error', msg: 'La caja de texto JSON está vacía o el archivo no cargó correctamente.' });
+      return;
+    }
+
+    setIsUploadingJson(true);
+    setJsonUploadFeedback(null);
+
+    try {
+      let parsed = JSON.parse(jsonStringToParse);
+      if (!Array.isArray(parsed)) {
+        throw new Error('El JSON debe ser un Array (arreglo) de objetos correspondientes a partidos.');
+      }
+
+      const preparedMatches = [];
+      for (let i = 0; i < parsed.length; i++) {
+        const m = parsed[i];
+        
+        const home = m.homeTeam || m.local;
+        const away = m.awayTeam || m.visitante;
+        const dateStr = m.matchDate || m.date || m.fecha;
+
+        if (!home || !away) {
+          throw new Error(`En el partido en índice ${i} no se encontró el campo del equipo local ("homeTeam" o "local") o del equipo visitante ("awayTeam" o "visitante").`);
+        }
+        if (!dateStr) {
+          throw new Error(`El partido en índice ${i} ("${home} vs ${away}") no especifica ninguna fecha de inicio.`);
+        }
+
+        let homeWithEmoji = home;
+        let awayWithEmoji = away;
+        
+        const hasEmoji = (text: string) => /[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g.test(text);
+
+        if (!hasEmoji(home)) {
+          const cleanHome = home.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+          const flag = getFlagForCountry ? getFlagForCountry(cleanHome) : '';
+          homeWithEmoji = `${cleanHome} ${flag || '🏳️'}`.trim();
+        }
+
+        if (!hasEmoji(away)) {
+          const cleanAway = away.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+          const flag = getFlagForCountry ? getFlagForCountry(cleanAway) : '';
+          awayWithEmoji = `${cleanAway} ${flag || '🏳️'}`.trim();
+        }
+
+        let isoDate: string;
+        try {
+          if (m.fecha && m.hora) {
+            isoDate = new Date(`${m.fecha}T${m.hora}:00`).toISOString();
+          } else {
+            isoDate = new Date(dateStr).toISOString();
+          }
+        } catch {
+          throw new Error(`La fecha "${dateStr}" del partido "${home} vs ${away}" no posee un formato de fecha ISO válido.`);
+        }
+
+        preparedMatches.push({
+          id: m.id || m.nro ? `match_custom_${m.id || m.nro}` : `match_custom_${Date.now()}_${i}`,
+          homeTeam: homeWithEmoji,
+          awayTeam: awayWithEmoji,
+          matchDate: isoDate,
+          phase: m.phase || m.grupo || m.fase || 'grupos'
+        });
+      }
+
+      await dbService.loadCustomStageFixture(preparedMatches);
+      setJsonUploadFeedback({ type: 'success', msg: `¡Nuevo fixture de grupos cargado con absoluto éxito! Se registraron ${preparedMatches.length} partidos nuevos y se reiniciaron todos los pronósticos y puntos.` });
+      setCustomJsonText('');
+    } catch (e: any) {
+      console.error(e);
+      setJsonUploadFeedback({ type: 'error', msg: `Error de procesamiento del JSON: ${e.message || e}` });
+    } finally {
+      setIsUploadingJson(false);
+    }
+  };
+
+  const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setCustomJsonText(text);
+      setJsonUploadFeedback(null);
+    };
+    reader.readAsText(file);
+  };
+
+  // Export JSON state
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const downloadJSON = (data: any, fileName: string) => {
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(data, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', jsonString);
+    downloadAnchor.setAttribute('download', fileName);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const copyToClipboard = async (data: any, key: string) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2500);
+    } catch (err) {
+      alert('No se pudo copiar al portapapeles. Te descargamos el archivo automáticamente.');
+      downloadJSON(data, `${key}.json`);
+    }
+  };
+
+  // Replicate exact group standing calculation for audit exports
+  const calculateGroupStandings = () => {
+    const teamToGroup: Record<string, string> = {};
+    OFFICIAL_WORLD_STAGE_MATCHES.forEach(m => {
+      teamToGroup[m.local] = m.fase;
+      teamToGroup[m.visitante] = m.fase;
+    });
+
+    const cleanTeams = Object.keys(teamToGroup);
+
+    const standings: Record<string, { team: string; clean: string; pts: number; gd: number; gf: number; ga: number; gp: number; group: string }> = {};
+    
+    cleanTeams.forEach(team => {
+      standings[team] = {
+        team,
+        clean: team,
+        pts: 0,
+        gd: 0,
+        gf: 0,
+        ga: 0,
+        gp: 0,
+        group: teamToGroup[team]
+      };
+    });
+
+    const findCleanName = (name: string): string => {
+      if (!name) return "";
+      const removed = name.replace(/[^\p{L}\s\.\-]/gu, '').replace(/\s+/g, ' ').trim();
+      const match = cleanTeams.find(t => t.toLowerCase() === removed.toLowerCase());
+      return match || removed;
+    };
+
+    const groupMatches = matches.filter(m => (m.phase || 'grupos') === 'grupos');
+
+    groupMatches.forEach(m => {
+      if (m.status === 'finished' && m.homeScore !== null && m.homeScore !== undefined && m.awayScore !== null && m.awayScore !== undefined) {
+        const hClean = findCleanName(m.homeTeam);
+        const aClean = findCleanName(m.awayTeam);
+
+        const hRec = standings[hClean];
+        const aRec = standings[aClean];
+
+        if (hRec && aRec) {
+          const hs = Number(m.homeScore);
+          const as = Number(m.awayScore);
+
+          hRec.gp += 1;
+          aRec.gp += 1;
+          hRec.gf += hs;
+          hRec.ga += as;
+          aRec.gf += as;
+          aRec.ga += hs;
+          hRec.gd = hRec.gf - hRec.ga;
+          aRec.gd = aRec.gf - aRec.ga;
+
+          if (hs > as) {
+            hRec.pts += 3;
+          } else if (as > hs) {
+            aRec.pts += 3;
+          } else {
+            hRec.pts += 1;
+            aRec.pts += 1;
+          }
+        }
+      }
+    });
+
+    const groupsMap: Record<string, typeof standings[string][]> = {};
+    Object.values(standings).forEach(rec => {
+      if (!groupsMap[rec.group]) {
+        groupsMap[rec.group] = [];
+      }
+      groupsMap[rec.group].push(rec);
+    });
+
+    const groupNamesAlphabetical = [
+      "Grupo A", "Grupo B", "Grupo C", "Grupo D", "Grupo E", "Grupo F",
+      "Grupo G", "Grupo H", "Grupo I", "Grupo J", "Grupo K", "Grupo L"
+    ];
+
+    const finalStandings: Record<string, typeof standings[string][]> = {};
+
+    groupNamesAlphabetical.forEach(gName => {
+      const list = (groupsMap[gName] || []).sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.gd !== a.gd) return b.gd - a.gd;
+        if (b.gf !== a.gf) return b.gf - a.gf;
+        return a.clean.localeCompare(b.clean);
+      });
+      finalStandings[gName] = list;
+    });
+
+    return finalStandings;
+  };
 
   // Bulk JSON Upload states
   const [bulkJson, setBulkJson] = useState('');
@@ -457,6 +808,442 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             >
               <span>Guardar Configuración</span>
             </button>
+          </div>
+        </div>
+
+        {/* TOURNAMENT PHASES VOTING ENABLEMENT MODULE */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+              <Award className="h-4.5 w-4.5 text-blue-700 shrink-0" />
+              <span>Habilitar Etapas de Votación 🗳️</span>
+            </h3>
+            <p className="text-[11.5px] leading-relaxed text-slate-500">
+              Controlá qué etapas de cruces están activas para que los empleados puedan emitir y modificar sus pronósticos.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleEnableNextPhase}
+            disabled={updatingPhases}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50"
+          >
+            {updatingPhases ? (
+              <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <span>Habilitar Siguiente Etapa para Votar ➡️</span>
+            )}
+          </button>
+
+          {phaseSuccess && (
+            <p className="text-[10px] text-center font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 rounded-lg animate-pulse">
+              ¡Estado de fases actualizado con éxito!
+            </p>
+          )}
+
+          <div className="space-y-1.5 pt-3 border-t border-slate-100">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Fases del Fixture:
+            </span>
+            {phaseSequence.map(tag => {
+              const isEnabled = enabledPhases.includes(tag);
+              return (
+                <div 
+                  key={tag} 
+                  className={`flex items-center justify-between p-2 rounded-xl border text-[11px] transition-colors ${
+                    isEnabled 
+                      ? 'border-blue-105 bg-blue-50/20 border-blue-200' 
+                      : 'border-slate-100 bg-slate-50/50'
+                  }`}
+                >
+                  <span className="font-bold text-slate-700">{phaseLabels[tag]}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePhase(tag)}
+                    disabled={updatingPhases}
+                    className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                      isEnabled 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                    }`}
+                  >
+                    {isEnabled ? 'Activa ✅' : 'Inactiva 🔒'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* GENERATE KNOCKOUT MODULE */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+            <Sparkles className="h-4.5 w-4.5 text-blue-700 shrink-0" />
+            <span>Preparación: Llaves de Fase Final 🏆</span>
+          </h3>
+          <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
+            Generá automáticamente los dieciséis partidos de los <strong>16avos de Final</strong> una vez concluida la Fase de Grupos.
+          </p>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => handleGenerateKnockoutStage('dynamic')}
+              disabled={generatingKnockout}
+              className="w-full bg-slate-900 hover:bg-slate-950 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {generatingKnockout ? (
+                <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <span>Calcular Clasificados Reales 🇦🇷</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => handleGenerateKnockoutStage('placeholder')}
+              disabled={generatingKnockout}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {generatingKnockout ? (
+                <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <span>Crear Plantilla con Posiciones 🏆</span>
+              )}
+            </button>
+
+            {knockoutFeedback && (
+              <div className={`text-[11px] p-3 rounded-xl border font-medium ${
+                knockoutFeedback.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-250' 
+                  : 'bg-rose-50 text-rose-800 border-rose-250'
+              }`}>
+                {knockoutFeedback.text}
+              </div>
+            )}
+
+            <div className="bg-blue-50/50 rounded-xl p-3 border border-blue-100 text-[10.5px] text-blue-900 leading-relaxed space-y-1">
+              <span className="font-extrabold block">🧠 ¿Cómo funciona la carga automática?</span>
+              <p>
+                <strong>Calcular Clasificados:</strong> Analiza todos tus partidos del Prode, calcula la tabla grupal (Puntos, DG, Goles a Favor) y empareja a los clasificados bajo las reglas oficiales del campeonato.
+              </p>
+              <p>
+                <strong>Crear Plantilla:</strong> Carga marcadores conceptuales (como "1A vs 3C/D/E/F") permitiendo a los usuarios jugar y armar sus predicciones de fase final por adelantado.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* EXPORT DATA & AUDIT SYSTEM (JSON) */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+              <FileJson className="h-4.5 w-4.5 text-blue-700 shrink-0" />
+              <span>Exportar & Auditar Datos (JSON) 📊</span>
+            </h3>
+            <p className="text-[11.5px] leading-relaxed text-slate-500">
+              Generá, copiá o descargá los archivos de datos en tiempo real de cada etapa. Usá estos reportes para auditar las tablas de clasificación y verificar si los emparejamientos de 16avos de Final se calcularon adecuadamente.
+            </p>
+          </div>
+
+          <div className="space-y-3.5 pt-1">
+            {/* 1. Grupo matches */}
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+              <div>
+                <span className="text-[11.5px] font-bold text-slate-800 block">Partidos: Fase de Grupos</span>
+                <span className="text-[10px] text-slate-400">
+                  {matches.filter(m => (m.phase || 'grupos') === 'grupos').length} partidos registrados
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(matches.filter(m => (m.phase || 'grupos') === 'grupos'), 'grupos_partidos')}
+                  className="flex items-center gap-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Copy className="h-3 w-3 shrink-0" />
+                  {copiedKey === 'grupos_partidos' ? '¡Copiado! ✅' : 'Copiar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadJSON(matches.filter(m => (m.phase || 'grupos') === 'grupos'), 'fase_de_grupos_partidos.json')}
+                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Download className="h-3 w-3 shrink-0" />
+                  Bajar
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Standings */}
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+              <div>
+                <span className="text-[11.5px] font-bold text-slate-800 block">Posiciones de Grupos Calculadas</span>
+                <span className="text-[10px] text-slate-400">
+                  Pts, DG, Goles Favor/Contra (12 grupos)
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(calculateGroupStandings(), 'posiciones_calculadas')}
+                  className="flex items-center gap-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Copy className="h-3 w-3 shrink-0" />
+                  {copiedKey === 'posiciones_calculadas' ? '¡Copiado! ✅' : 'Copiar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadJSON(calculateGroupStandings(), 'tablas_de_posiciones_grupos.json')}
+                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Download className="h-3 w-3 shrink-0" />
+                  Bajar
+                </button>
+              </div>
+            </div>
+
+            {/* 3. 16avos matches */}
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+              <div>
+                <span className="text-[11.5px] font-bold text-slate-800 block">Partidos: 16avos de Final</span>
+                <span className="text-[10px] text-slate-400">
+                  {matches.filter(m => m.phase === '16avos').length} cruces calculados / creados
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(matches.filter(m => m.phase === '16avos'), '16avos_partidos')}
+                  className="flex items-center gap-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Copy className="h-3 w-3 shrink-0" />
+                  {copiedKey === '16avos_partidos' ? '¡Copiado! ✅' : 'Copiar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadJSON(matches.filter(m => m.phase === '16avos'), '16avos_final_partidos.json')}
+                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Download className="h-3 w-3 shrink-0" />
+                  Bajar
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Complete system fixture */}
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+              <div>
+                <span className="text-[11.5px] font-bold text-slate-800 block">Todo el Fixture del Sistema</span>
+                <span className="text-[10px] text-slate-400">
+                  {matches.length} partidos totales cargados
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(matches, 'fixture_total')}
+                  className="flex items-center gap-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Copy className="h-3 w-3 shrink-0" />
+                  {copiedKey === 'fixture_total' ? '¡Copiado! ✅' : 'Copiar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadJSON(matches, 'fixture_completo_sistema.json')}
+                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                >
+                  <Download className="h-3 w-3 shrink-0" />
+                  Bajar
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50/60 text-blue-900 border border-blue-100 rounded-xl text-[10px] leading-relaxed space-y-1 font-sans">
+              <span className="font-extrabold block text-blue-900">💡 Instrucción de Control de Cruces</span>
+              <p>
+                Si considerás que los cruces de los 16avos de Final no se armaron de acuerdo a tu previsto, hacé clic en el botón <strong>"Copiar"</strong> de las <strong>Posiciones calculadas</strong>, luego el de <strong>16avos de Final</strong>, y pegalos en la caja de conversación con el asistente de AI de Google Studio. Con eso controlaremos y corregiremos de inmediato cualquier diferencia algorítmica.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* TOURNAMENT RESET & CLEANUP PANEL */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm border-rose-200">
+          <h3 className="text-sm font-extrabold text-rose-950 mb-1 flex items-center gap-1.5 font-sans">
+            <ShieldAlert className="h-4 w-4.5 text-rose-600 shrink-0" />
+            <span>Limpieza & Reinicio del Torneo 🧹</span>
+          </h3>
+          <p className="text-[11px] text-slate-550 leading-relaxed text-slate-500 mb-4 font-sans">
+            Eliminá por completo todos los puntos acumulados y los pronósticos de los colaboradores para empezar toda la competencia de vuelta desde cero. Se conservarán los encuentros de Fase de Grupos actuales con sus marcadores vacíos.
+          </p>
+
+          <div className="space-y-3">
+            {resetStep === 0 ? (
+              <button
+                type="button"
+                id="btn-reset-init"
+                onClick={() => setResetStep(1)}
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer select-none"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Reiniciar Todo el Torneo 🔄</span>
+              </button>
+            ) : resetStep === 1 ? (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 space-y-3 font-sans">
+                <p className="text-xs font-bold text-rose-900 flex items-center gap-1.5 text-left">
+                  <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                  ¿Estás convencido? Paso 1 de 2
+                </p>
+                <p className="text-[10.5px] text-rose-800 leading-relaxed text-left">
+                  Esta acción eliminará de forma irreversible todos los pronósticos ingresados por los usuarios de Banco de Corrientes y reiniciará sus puntajes a 0.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    id="btn-reset-step2"
+                    onClick={() => setResetStep(2)}
+                    className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-extrabold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                  >
+                    Sí, continuar ➡️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResetStep(0)}
+                    className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-bold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-rose-100 border-2 border-rose-300 rounded-xl p-3.5 space-y-3 font-sans">
+                <p className="text-xs font-black text-rose-950 flex items-center gap-1.5 text-left">
+                  <AlertTriangle className="h-4 w-4 text-rose-700 animate-pulse shrink-0" />
+                  Paso 2 de 2: CONFIRMACIÓN DEFINITIVA
+                </p>
+                <p className="text-[10.5px] text-rose-950 font-bold leading-relaxed text-left">
+                  ⚠️ ESTA OPERACIÓN ES ABSOLUTAMENTE FINAL. ¿Realmente confirmás vaciar toda la competencia de la base de datos para comenzar nuevamente de 0?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    id="btn-reset-confirm"
+                    onClick={handleResetTournament}
+                    disabled={isResetting}
+                    className="flex-1 bg-rose-700 hover:bg-rose-800 text-white text-[11px] font-black py-2 px-3 rounded-lg transition-all cursor-pointer shadow flex items-center justify-center gap-1.5 select-none"
+                  >
+                    {isResetting ? (
+                      <RefreshCcw className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                    <span>SÍ, REINICIAR DE 0</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResetStep(0)}
+                    disabled={isResetting}
+                    className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-bold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetFeedback && (
+              <div className={`text-[11px] p-3 rounded-xl border font-semibold text-left ${
+                resetFeedback.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-250' 
+                  : 'bg-rose-50 text-rose-800 border-rose-250'
+              }`}>
+                {resetFeedback.msg}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* UPLOAD CUSTOM stage FIXTURE (JSON BASED) */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+            <FileJson className="h-4.5 w-4.5 text-blue-700 shrink-0" />
+            <span>Subir Fixture de Grupos Nuevo 📂</span>
+          </h3>
+          <p className="text-[11px] text-slate-500 leading-relaxed mb-4 font-sans">
+            Importá un calendario de Fase de Grupos personalizado mediante archivos <strong>.json</strong> para dar inicio a otra edición con cruces o equipos totalmente distintos.
+          </p>
+
+          <div className="space-y-4">
+            {/* Drag & drop or files picker container */}
+            <div className="border border-dashed border-slate-300 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/10 p-3.5 rounded-xl transition-all cursor-pointer relative text-center">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleJsonFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="flex flex-col items-center gap-1 font-sans">
+                <UploadCloud className="h-7 w-7 text-blue-500" />
+                <span className="text-xs font-bold text-slate-700">Arrastrá tu archivo .json</span>
+                <span className="text-[10px] text-slate-400">o hacé clic para explorar tus carpetas</span>
+              </div>
+            </div>
+
+            {/* Pasting area style indicator */}
+            <div className="space-y-1">
+              <label className="block text-[10px] font-extrabold text-slate-400 uppercase text-left">
+                O pegá el texto del JSON directamente abajo:
+              </label>
+              <textarea
+                value={customJsonText}
+                onChange={(e) => setCustomJsonText(e.target.value)}
+                placeholder='[\n  {\n    "homeTeam": "Argentina",\n    "awayTeam": "Paraguay",\n    "matchDate": "2026-06-15T22:00:00Z",\n    "phase": "grupos"\n  }\n]'
+                rows={5}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-mono leading-normal focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all resize-y"
+              />
+            </div>
+
+            {jsonUploadFeedback && (
+              <div className={`text-[11px] p-3 rounded-xl border text-left font-medium ${
+                jsonUploadFeedback.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                  : 'bg-rose-50 text-rose-800 border-rose-250'
+              }`}>
+                {jsonUploadFeedback.msg}
+              </div>
+            )}
+
+            <button
+              type="button"
+              id="btn-upload-custom"
+              onClick={() => handleUploadCustomFixtureJson(customJsonText)}
+              disabled={isUploadingJson || !customJsonText.trim()}
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-40 select-none"
+            >
+              {isUploadingJson ? (
+                <>
+                  <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Procesando e Importando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  <span>Cargar Nuevo Fixture de Grupos</span>
+                </>
+              )}
+            </button>
+
+            {/* Instruction block on format */}
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-150 text-[9.5px] text-slate-500 leading-relaxed font-sans mt-3 text-left space-y-1">
+              <span className="font-extrabold text-slate-700 uppercase tracking-wide block">📋 Formato JSON Esperado:</span>
+              <p>Debe ser un array de objetos con los siguientes campos:</p>
+              <ul className="list-disc pl-3.5 space-y-0.5">
+                <li><code className="bg-slate-200 px-1 rounded font-mono">homeTeam</code> o <code className="bg-slate-200 px-1 rounded font-mono">local</code> (ej: "México" o "México 🇲🇽")</li>
+                <li><code className="bg-slate-200 px-1 rounded font-mono">awayTeam</code> o <code className="bg-slate-200 px-1 rounded font-mono">visitante</code> (ej: "Brasil")</li>
+                <li><code className="bg-slate-200 px-1 rounded font-mono">matchDate</code>, <code className="bg-slate-200 px-1 rounded font-mono">date</code> o <code className="bg-slate-200 px-1 rounded font-mono">fecha</code> (formato ISO o YYYY-MM-DD HH:MM)</li>
+                <li><code className="bg-slate-200 px-1 rounded font-mono">phase</code> o <code className="bg-slate-205 px-1 rounded font-mono">grupo</code> (opcional, ej: "Grupo A", por defecto "grupos")</li>
+              </ul>
+            </div>
           </div>
         </div>
 

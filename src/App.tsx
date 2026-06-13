@@ -31,6 +31,7 @@ import { ProfileSelector } from './components/ProfileSelector';
 import { ProdeGeneral } from './components/ProdeGeneral';
 import { PrizesTab } from './components/PrizesTab';
 import { FixtureCompleto } from './components/FixtureCompleto';
+import { PosicionesYCopas } from './components/PosicionesYCopas';
 import { OFFICIAL_WORLD_STAGE_MATCHES } from './lib/worldCupData';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
   const [allForecasts, setAllForecasts] = useState<UserForecast[]>([]);
   const [standings, setStandings] = useState<Standing[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [enabledPhases, setEnabledPhases] = useState<string[]>(['grupos']);
 
  const [prizes, setPrizes] = useState<{ first: string; second: string; third: string }>(() => {
   const stored = localStorage.getItem('prode_prizes');
@@ -82,7 +84,7 @@ export default function App() {
   };
 
   // Page Controls
-  const [activeTab, setActiveTab] = useState<'matches' | 'fixture-completo' | 'standings' | 'prode-general' | 'prizes' | 'admin'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'fixture-completo' | 'posiciones-copas' | 'standings' | 'prode-general' | 'prizes' | 'admin'>('matches');
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Manual Profile creation for the unauthenticated landing screen
@@ -171,12 +173,18 @@ export default function App() {
       setUsers(data);
     });
 
+    // Global Settings subscription for active phases
+    const unsubSettings = dbService.subscribeSettings((data) => {
+      setEnabledPhases(data.enabledPhases);
+    });
+
     return () => {
       unsubMatches();
       unsubStandings();
       unsubAllForecasts();
       unsubForecasts();
       unsubUsers();
+      unsubSettings();
     };
   }, [currentUser]);
 
@@ -257,6 +265,14 @@ export default function App() {
 
   const handleUnsettleMatch = async (matchId: string) => {
     return dbService.unsettleMatch(matchId);
+  };
+
+  const handleGenerateKnockout = async (mode: 'dynamic' | 'placeholder', targetPhase: string = '16avos') => {
+    return dbService.generateKnockoutMatches(matches, mode, targetPhase);
+  };
+
+  const handleUpdateEnabledPhases = async (phases: string[]) => {
+    return dbService.updateEnabledPhases(phases);
   };
 
   const handleLoadOfficialFixture = async () => {
@@ -640,6 +656,24 @@ export default function App() {
                 </button>
 
                 <button
+                  onClick={() => setActiveTab('posiciones-copas')}
+                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    activeTab === 'posiciones-copas' 
+                      ? 'text-blue-900 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <span>Tablas y Copas 🏆</span>
+                  {activeTab === 'posiciones-copas' && (
+                    <motion.div 
+                      layoutId="active-tab-line" 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
+                    />
+                  )}
+                </button>
+
+                <button
                   onClick={() => setActiveTab('standings')}
                   className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
                     activeTab === 'standings' 
@@ -725,6 +759,8 @@ export default function App() {
                     userId={currentUser.uid}
                     isUserAdmin={isUserAdmin}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
+                    enabledPhases={enabledPhases}
+                    onGenerateKnockout={handleGenerateKnockout}
                   />
                 )}
 
@@ -733,6 +769,10 @@ export default function App() {
                     matches={matches}
                     forecasts={forecasts}
                   />
+                )}
+
+                {activeTab === 'posiciones-copas' && (
+                  <PosicionesYCopas matches={matches} />
                 )}
 
                 {activeTab === 'standings' && (
@@ -767,6 +807,9 @@ export default function App() {
                     prizes={prizes}
                     onUpdatePrizes={handleUpdatePrizes}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
+                    onGenerateKnockout={handleGenerateKnockout}
+                    enabledPhases={enabledPhases}
+                    onUpdateEnabledPhases={handleUpdateEnabledPhases}
                     users={users}
                     onUpdateUser={handleUpdateUser}
                   />
