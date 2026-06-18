@@ -418,6 +418,11 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches }) =
             </div>
           </div>
 
+          {/* Mobile swiping tip layout helper banner */}
+          <div className="sm:hidden bg-blue-50 border border-blue-200/60 rounded-xl p-3 text-center text-[11px] font-extrabold text-blue-900 animate-pulse flex items-center justify-center gap-1.5 shadow-sm">
+            <span>📱 Deslizá la pantalla o girá el celular hacia la derecha para ver los Octavos, Cuartos y Semis 👉</span>
+          </div>
+
           {/* BRACKET TIMELINE COLUMNS (Desktops scrollable horizontal grid layout represents the binary tree beautifully) */}
           <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             <div className="flex gap-6 min-w-[1240px] px-2 items-stretch font-sans">

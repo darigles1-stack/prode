@@ -618,132 +618,104 @@ export default function App() {
               )}
 
               {/* View/Tab selector bar */}
-              <div className="flex border-b border-slate-200">
+              <div id="main-tabs-selector" className="flex flex-wrap border-b border-slate-200 pb-2.5 gap-2 select-none justify-start">
                 <button
+                  type="button"
+                  id="tab-matches"
                   onClick={() => setActiveTab('matches')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'matches' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-700 shrink-0" />
                   <span>Fixture y Pronósticos</span>
-                  {activeTab === 'matches' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
                 </button>
 
                 <button
+                  type="button"
+                  id="tab-fixture-completo"
                   onClick={() => setActiveTab('fixture-completo')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'fixture-completo' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Calendar className="h-4 w-4 text-emerald-600" />
+                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-600 shrink-0" />
                   <span>Fixture Completo 🗓️</span>
-                  {activeTab === 'fixture-completo' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
                 </button>
 
                 <button
+                  type="button"
+                  id="tab-posiciones-copas"
                   onClick={() => setActiveTab('posiciones-copas')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'posiciones-copas' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-amber-500 shrink-0" />
                   <span>Tablas y Copas 🏆</span>
-                  {activeTab === 'posiciones-copas' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
                 </button>
 
                 <button
+                  type="button"
+                  id="tab-standings"
                   onClick={() => setActiveTab('standings')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'standings' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Trophy className="h-4 w-4" />
+                  <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
                   <span>Tabla de Posiciones</span>
-                  {activeTab === 'standings' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
                 </button>
 
                 <button
+                  type="button"
+                  id="tab-prode-general"
                   onClick={() => setActiveTab('prode-general')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'prode-general' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Grid className="h-4 w-4" />
-                  <span>Prode General</span>
-                  {activeTab === 'prode-general' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
+                  <Grid className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
+                  <span>Prode General 👥</span>
                 </button>
 
                 <button
+                  type="button"
+                  id="tab-prizes"
                   onClick={() => setActiveTab('prizes')}
-                  className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'prizes' 
-                      ? 'text-blue-900 font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-700'
+                      ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
+                      : 'bg-slate-50/70 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
                 >
-                  <Award className="h-4 w-4 text-amber-500" />
-                  <span>Premios del Podio</span>
-                  {activeTab === 'prizes' && (
-                    <motion.div 
-                      layoutId="active-tab-line" 
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700" 
-                    />
-                  )}
+                  <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-amber-500 shrink-0" />
+                  <span>Premios del Podio 🎁</span>
                 </button>
 
                 {isUserAdmin && (
                   <button
+                    type="button"
+                    id="tab-admin"
                     onClick={() => setActiveTab('admin')}
-                    className={`flex items-center gap-2 pb-3.5 px-5 text-sm font-bold transition-all relative cursor-pointer ${
+                    className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl transition-all relative cursor-pointer select-none ${
                       activeTab === 'admin' 
-                        ? 'text-yellow-600 font-extrabold' 
-                        : 'text-slate-400 hover:text-slate-700'
+                        ? 'bg-yellow-50 text-yellow-800 border-b-2 border-yellow-600 shadow-sm' 
+                        : 'bg-slate-50/75 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                   >
-                    <Settings className="h-4 w-4" />
-                    <span>Panel de Control (Admin)</span>
-                    {activeTab === 'admin' && (
-                      <motion.div 
-                        layoutId="active-tab-line" 
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" 
-                      />
-                    )}
+                    <Settings className="h-3.5 w-3.5 md:h-4 md:w-4 text-yellow-600 shrink-0 animate-pulse" />
+                    <span>Panel de Control (Admin) ⚙️</span>
                   </button>
                 )}
               </div>

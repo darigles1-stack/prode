@@ -19,7 +19,18 @@ import {
 } from 'lucide-react';
 import { SoccerMatch, UserProfile } from '../types';
 import { dbService } from '../lib/dbService';
-import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry } from '../lib/worldCupData';
+import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry, getCountryCode } from '../lib/worldCupData';
+
+// Helper to extract clean name and its robust flag
+const getTeamNameAndFlag = (teamNameWithMaybeFlag: string) => {
+  const cleanName = teamNameWithMaybeFlag
+    .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '')
+    .replace(/\uDB40[\uDC00-\uDFFF]/g, '')
+    .trim();
+  const flag = getFlagForCountry(cleanName);
+  const code = getCountryCode(cleanName);
+  return { name: cleanName, flag, code };
+};
 
 interface AdminPanelProps {
   currentUser?: UserProfile;
@@ -256,6 +267,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
+  // --- Database Backup & Restoration States and Handlers ---
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupFeedback, setBackupFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [backupImportText, setBackupImportText] = useState('');
+  const [backupImportStep, setBackupImportStep] = useState(0); // 0 = initial, 1 = confirm warning before overwriting everything
+
+  const handleExportBackup = async () => {
+    setBackupLoading(true);
+    setBackupFeedback(null);
+    try {
+      const data = await dbService.exportBackupData();
+      const filename = `prode_banco_resguardo_${new Date().toISOString().slice(0, 10)}.json`;
+      downloadJSON(data, filename);
+      setBackupFeedback({ type: 'success', msg: '¡Resguardo completo de base de datos generado y descargado con éxito!' });
+    } catch (e: any) {
+      console.error(e);
+      setBackupFeedback({ type: 'error', msg: `Error al exportar datos de resguardo: ${e.message || e}` });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleImportBackup = async (jsonString: string) => {
+    if (!jsonString.trim()) {
+      setBackupFeedback({ type: 'error', msg: 'Por favor, arrastrá un archivo JSON o pegá el texto para restaurar.' });
+      return;
+    }
+    setBackupLoading(true);
+    setBackupFeedback(null);
+    try {
+      const parsed = JSON.parse(jsonString);
+      // Basic duck-typing verification that backup is complete
+      if (typeof parsed !== 'object' || (!parsed.matches && !parsed.users && !parsed.forecasts)) {
+        throw new Error('El JSON provisto no parece ser una copia de resguardo compatible (faltan colecciones de base de datos).');
+      }
+      const res = await dbService.importBackupData(parsed);
+      if (res.success) {
+        setBackupFeedback({ type: 'success', msg: res.message });
+        setBackupImportText('');
+        setBackupImportStep(0);
+      } else {
+        setBackupFeedback({ type: 'error', msg: res.message });
+      }
+    } catch (e: any) {
+      console.error(e);
+      setBackupFeedback({ type: 'error', msg: `Error importando/restaurando la copia: ${e.message || e}` });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleBackupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setBackupImportText(text);
+      setBackupFeedback(null);
+    };
+    reader.readAsText(file);
+  };
+
+
   const handleUploadCustomFixtureJson = async (jsonStringToParse: string) => {
     if (!jsonStringToParse.trim()) {
       setJsonUploadFeedback({ type: 'error', msg: 'La caja de texto JSON está vacía o el archivo no cargó correctamente.' });
@@ -292,13 +368,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         const hasEmoji = (text: string) => /[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g.test(text);
 
         if (!hasEmoji(home)) {
-          const cleanHome = home.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+          const cleanHome = home.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
           const flag = getFlagForCountry ? getFlagForCountry(cleanHome) : '';
           homeWithEmoji = `${cleanHome} ${flag || '🏳️'}`.trim();
         }
 
         if (!hasEmoji(away)) {
-          const cleanAway = away.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+          const cleanAway = away.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
           const flag = getFlagForCountry ? getFlagForCountry(cleanAway) : '';
           awayWithEmoji = `${cleanAway} ${flag || '🏳️'}`.trim();
         }
@@ -597,8 +673,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleGenerateJsonTemplate = () => {
     const template = pendingMatches.map(m => {
       // Remove flags for clean team names in the template
-      const cleanHome = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
-      const cleanAway = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+      const cleanHome = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
+      const cleanAway = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
       return {
         local: cleanHome,
         visitante: cleanAway,
@@ -1163,6 +1239,134 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
 
+        {/* DATABASE BACKUP & RESTORATION PANEL */}
+        <div id="backup-migration-panel" className="bg-white border-2 border-blue-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+            <Download className="h-4 w-4 text-blue-800 shrink-0" />
+            <span>Migración Completa de Base de Datos (JSON) 💾</span>
+          </h3>
+          <p className="text-[11px] text-slate-500 leading-relaxed mb-4 font-sans text-left">
+            Utilizá este panel para transportar o duplicar toda la información del Prode (partidos agendados, predicciones, usuarios registrados y configuraciones) usando archivos JSON independientes o unificados.
+          </p>
+
+          <div className="space-y-4">
+            {/* Export Section (1 solo boton q me baje todos los json) */}
+            <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="text-left">
+                <span className="text-xs font-bold text-blue-950 block">1. Descargar copia de seguridad</span>
+                <p className="text-[10px] text-slate-500">Unifica y descarga todos los partidos, usuarios, pronósticos y configuraciones en un solo archivo.</p>
+              </div>
+              <button
+                type="button"
+                id="btn-export-all-json"
+                onClick={handleExportBackup}
+                disabled={backupLoading}
+                className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer select-none disabled:opacity-55 shrink-0"
+              >
+                {backupLoading ? (
+                  <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                <span>Bajar todo en un JSON para migrar base de datos</span>
+              </button>
+            </div>
+
+            {/* Import Section (otra parte donde pueda subir los json para cargar la base de datos) */}
+            <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/20">
+              <div className="text-left">
+                <span className="text-xs font-bold text-slate-800 block">2. Subir JSON para cargar la base de datos (Migración)</span>
+                <p className="text-[10px] text-slate-400">Seleccioná o arrastrá el archivo JSON de resguardo descargado anteriormente para restablecer toda la información en este entorno.</p>
+              </div>
+
+              {/* File picker container */}
+              <div className="border-2 border-dashed border-slate-300 hover:border-blue-400 bg-white p-4 rounded-xl transition-all cursor-pointer relative text-center">
+                <input
+                  type="file"
+                  id="input-file-backup"
+                  accept=".json"
+                  onChange={handleBackupFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="flex flex-col items-center gap-1 font-sans py-1">
+                  <UploadCloud className="h-6 w-6 text-slate-400" />
+                  <span className="text-[11px] font-bold text-slate-600">Subir archivo JSON de migración</span>
+                  <span className="text-[9px] text-slate-400">Hacé clic o arrastrá tu resguardo aquí</span>
+                </div>
+              </div>
+
+              {/* Paste or Textarea */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[9px] font-extrabold text-slate-400 uppercase">
+                  O pegá el texto JSON de la copia de resguardo aquí:
+                </label>
+                <textarea
+                  id="textarea-backup-raw"
+                  value={backupImportText}
+                  onChange={(e) => setBackupImportText(e.target.value)}
+                  placeholder='{\n  "version": "1.0",\n  "matches": [...],\n  "forecasts": [...],\n  "users": [...]\n}'
+                  rows={4}
+                  className="w-full px-3 py-2 bg-white border border-slate-250 rounded-lg text-[10.5px] font-mono leading-normal focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all resize-y"
+                />
+              </div>
+
+              {backupImportStep === 0 ? (
+                <button
+                  type="button"
+                  id="btn-trigger-restore"
+                  onClick={() => {
+                    if (!backupImportText.trim()) return;
+                    setBackupImportStep(1); // request warning confirmation
+                  }}
+                  disabled={backupLoading || !backupImportText.trim()}
+                  className="w-full bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow cursor-pointer disabled:opacity-40 select-none"
+                >
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                  <span>Cargar y Restaurar Copia en la Base de Datos</span>
+                </button>
+              ) : (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-3 font-sans">
+                  <p className="text-xs font-bold text-rose-900 flex items-center gap-1.5 text-left">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 shadow-sm" />
+                    ⚠️ ALERTAS DE MIGRACIÓN: Se reescribirán todos los datos
+                  </p>
+                  <p className="text-[10px] text-rose-800 leading-relaxed text-left">
+                    Al restaurar esta copia de resguardo, <strong>se borrarán permanentemente</strong> todos los partidos, predicciones e inscripciones de usuarios que existan actualmente y serán reemplazados por los del archivo de migración. ¿Confirmás proceder?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      id="btn-confirm-import"
+                      onClick={() => handleImportBackup(backupImportText)}
+                      disabled={backupLoading}
+                      className="flex-1 bg-rose-700 hover:bg-rose-800 text-white text-[11px] font-extrabold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                    >
+                      Sí, borrar datos y restaurar copia de migración 🔄
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBackupImportStep(0)}
+                      className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-bold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {backupFeedback && (
+              <div id="backup-feedback-message" className={`text-[11px] p-3 rounded-xl border text-left font-medium ${
+                backupFeedback.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-250' 
+                  : 'bg-rose-50 text-rose-800 border-rose-250'
+              }`}>
+                {backupFeedback.msg}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* UPLOAD CUSTOM stage FIXTURE (JSON BASED) */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
@@ -1321,10 +1525,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   >
                     {/* Match team descriptions */}
                     <div className="flex-1 text-left">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-800">{match.homeTeam}</span>
-                        <span className="text-xs text-slate-400 font-bold">vs</span>
-                        <span className="font-bold text-slate-800">{match.awayTeam}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 bg-slate-100/50 py-1 px-2 rounded-lg">
+                          <img 
+                            src={`/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
+                            alt={getTeamNameAndFlag(match.homeTeam).name} 
+                            title={getTeamNameAndFlag(match.homeTeam).name}
+                            className="w-4 h-4 rounded-full shadow-sm select-none shrink-0" 
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                          <span className="font-bold text-slate-800 text-xs sm:text-sm">{getTeamNameAndFlag(match.homeTeam).name}</span>
+                        </div>
+                        <span className="text-xs text-slate-400 font-bold px-0.5">vs</span>
+                        <div className="flex items-center gap-1.5 bg-slate-100/50 py-1 px-2 rounded-lg">
+                          <span className="font-bold text-slate-800 text-xs sm:text-sm">{getTeamNameAndFlag(match.awayTeam).name}</span>
+                          <img 
+                            src={`/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
+                            alt={getTeamNameAndFlag(match.awayTeam).name} 
+                            title={getTeamNameAndFlag(match.awayTeam).name}
+                            className="w-4 h-4 rounded-full shadow-sm select-none shrink-0" 
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono">
@@ -1426,10 +1648,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     >
                       {/* Match team descriptions */}
                       <div className="flex-1 text-left">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-extrabold text-slate-800">{match.homeTeam}</span>
-                          <span className="text-xs text-slate-400 font-bold">vs</span>
-                          <span className="font-extrabold text-slate-800">{match.awayTeam}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 bg-slate-100/40 py-1 px-2 rounded-lg">
+                            <img 
+                              src={`/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
+                              alt={getTeamNameAndFlag(match.homeTeam).name} 
+                              title={getTeamNameAndFlag(match.homeTeam).name}
+                              className="w-4 h-4 rounded-full shadow-sm select-none shrink-0" 
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                            <span className="font-extrabold text-slate-800 text-xs sm:text-sm">{getTeamNameAndFlag(match.homeTeam).name}</span>
+                          </div>
+                          <span className="text-xs text-slate-400 font-bold px-0.5">vs</span>
+                          <div className="flex items-center gap-1.5 bg-slate-100/40 py-1 px-2 rounded-lg">
+                            <span className="font-extrabold text-slate-800 text-xs sm:text-sm">{getTeamNameAndFlag(match.awayTeam).name}</span>
+                            <img 
+                              src={`/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
+                              alt={getTeamNameAndFlag(match.awayTeam).name} 
+                              title={getTeamNameAndFlag(match.awayTeam).name}
+                              className="w-4 h-4 rounded-full shadow-sm select-none shrink-0" 
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          </div>
                         </div>
 
                         <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono">

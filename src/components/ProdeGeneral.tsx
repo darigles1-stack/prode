@@ -131,6 +131,11 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
         </div>
       </div>
 
+      {/* Mobile swiping tip layout helper banner */}
+      <div className="sm:hidden bg-blue-50 border border-blue-200/60 rounded-xl p-3 text-center text-[11px] font-extrabold text-blue-900 animate-pulse flex items-center justify-center gap-1.5 shadow-sm">
+        <span>📱 Deslizá la tabla hacia la derecha para ver todos los partidos de los compañeros 👉</span>
+      </div>
+
       {/* Matrix Table block with visual horizontal overflow */}
       {displayMatches.length > 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
