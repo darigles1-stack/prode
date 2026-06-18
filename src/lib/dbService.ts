@@ -979,6 +979,10 @@ export const dbService = {
     }
   },
 
+  computeStandings(users: UserProfile[], forecasts: UserForecast[], matches?: SoccerMatch[]): Standing[] {
+    return computeStandings(users, forecasts, matches);
+  },
+
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
     if (shouldUseFirebase()) {
       const userRef = doc(db, 'users', userId);

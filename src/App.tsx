@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trophy, 
@@ -47,9 +47,13 @@ export default function App() {
   const [matches, setMatches] = useState<SoccerMatch[]>([]);
   const [forecasts, setForecasts] = useState<UserForecast[]>([]);
   const [allForecasts, setAllForecasts] = useState<UserForecast[]>([]);
-  const [standings, setStandings] = useState<Standing[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [enabledPhases, setEnabledPhases] = useState<string[]>(['grupos']);
+
+  // Standing leaderboard derived in-memory to save heavy duplicate database reads
+  const standings = useMemo(() => {
+    return dbService.computeStandings(users, allForecasts, matches);
+  }, [users, allForecasts, matches]);
 
  const [prizes, setPrizes] = useState<{ first: string; second: string; third: string }>(() => {
   const stored = localStorage.getItem('prode_prizes');
@@ -136,6 +140,7 @@ export default function App() {
         console.log("Ejecutando sincronización automática de pronósticos y puntos diario...");
         try {
           await dbService.syncUserForecastsAndPoints();
+          localStorage.setItem('prode_last_daily_sync', new Date().toISOString());
         } catch (e) {
           console.error("Error during automatic sync:", e);
         }
@@ -149,7 +154,6 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) {
       setMatches([]);
-      setStandings([]);
       setAllForecasts([]);
       setForecasts([]);
       setUsers([]);
@@ -163,11 +167,6 @@ export default function App() {
     const unsubMatches = dbService.subscribeMatches((data) => {
       setMatches(data);
       setLoadingData(false);
-    });
-
-    // General Leaderboard subscription
-    const unsubStandings = dbService.subscribeStandings((data) => {
-      setStandings(data);
     });
 
     // All Forecasts subscription
@@ -192,13 +191,12 @@ export default function App() {
 
     return () => {
       unsubMatches();
-      unsubStandings();
       unsubAllForecasts();
       unsubForecasts();
       unsubUsers();
       unsubSettings();
     };
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   // Handle Logins
   const handleGoogleLogin = async () => {
