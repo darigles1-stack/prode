@@ -225,7 +225,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             Fases del Torneo Oficial Prode
           </span>
         </div>
-        <div className="flex items-center gap-3 overflow-x-auto pb-1.5 -mx-1 px-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+        <div className="flex flex-wrap items-stretch gap-2 pb-1 select-none">
           {phasesList.map((stg, index) => {
             const isSelected = selectedPhase === stg.tag;
             
@@ -248,7 +248,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   }
                 }}
                 disabled={!isUnlocked}
-                className={`flex items-start gap-2.5 p-3 px-4 rounded-xl border-2 transition-all text-left shrink-0 min-w-[155px] ${
+                className={`flex items-start gap-2.5 p-3 px-4 rounded-xl border-2 transition-all text-left flex-1 min-w-[135px] sm:min-w-[155px] ${
                   isSelected
                     ? 'border-blue-600 bg-blue-50/20 shadow-sm cursor-pointer'
                     : isUnlocked
@@ -445,46 +445,46 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   {/* High visual SCORE BOARD container */}
                   <div className="bg-slate-55 border border-slate-150 bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between shadow-inner">
                     {/* Home Team */}
-                    <div className="flex-1 flex items-center justify-end font-semibold text-sm text-slate-800 pr-2">
-                      <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
+                    <div className="flex-1 flex flex-col items-center justify-center sm:flex-row sm:justify-end font-semibold text-sm text-slate-800 pr-1 sm:pr-2">
+                      <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-right">
                         <img 
                           src={`/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
                           alt={getTeamNameAndFlag(match.homeTeam).name} 
                           title={getTeamNameAndFlag(match.homeTeam).name}
-                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          className="w-5 h-5 rounded-full shadow-sm select-none shrink-0" 
                         />
-                        <span>{getTeamNameAndFlag(match.homeTeam).name}</span>
+                        <span className="block truncate max-w-[80px] xs:max-w-[110px] sm:max-w-none">{getTeamNameAndFlag(match.homeTeam).name}</span>
                       </div>
                     </div>
 
                     {/* SCORE (Real Score or VS text) */}
-                    <div className="flex flex-col items-center px-4 font-mono">
+                    <div className="flex flex-col items-center px-1 sm:px-4 shrink-0 font-mono">
                       {match.status === 'finished' ? (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-2xl font-black text-blue-900">{match.homeScore}</span>
+                        <div className="flex items-center space-x-1 sm:space-x-2">
+                          <span className="text-xl sm:text-2xl font-black text-blue-900">{match.homeScore}</span>
                           <span className="text-slate-350 font-bold">-</span>
-                          <span className="text-2xl font-black text-blue-900">{match.awayScore}</span>
+                          <span className="text-xl sm:text-2xl font-black text-blue-900">{match.awayScore}</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-200/60 px-2.5 py-1 rounded-lg">
+                        <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-200/60 px-2.0 sm:px-2.5 py-1 rounded-lg">
                           VS
                         </span>
                       )}
                       
-                      <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold mt-1">
+                      <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider font-bold mt-1 text-center whitespace-nowrap">
                         Resultado Real
                       </span>
                     </div>
 
                     {/* Away Team */}
-                    <div className="flex-1 flex items-center justify-start font-semibold text-sm text-slate-800 pl-2">
-                      <div className="flex items-center gap-1.5 truncate text-slate-800 font-extrabold text-xs tracking-tight hover:scale-105 transition-transform cursor-default">
-                        <span>{getTeamNameAndFlag(match.awayTeam).name}</span>
+                    <div className="flex-1 flex flex-col items-center justify-center sm:flex-row sm:justify-start font-semibold text-sm text-slate-800 pl-1 sm:pl-2">
+                      <div className="flex flex-col-reverse items-center sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-left">
+                        <span className="block truncate max-w-[80px] xs:max-w-[110px] sm:max-w-none">{getTeamNameAndFlag(match.awayTeam).name}</span>
                         <img 
                           src={`/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
                           alt={getTeamNameAndFlag(match.awayTeam).name} 
                           title={getTeamNameAndFlag(match.awayTeam).name}
-                          className="w-5 h-5 rounded-full shadow-sm select-none" 
+                          className="w-5 h-5 rounded-full shadow-sm select-none shrink-0" 
                         />
                       </div>
                     </div>

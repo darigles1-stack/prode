@@ -86,6 +86,7 @@ export default function App() {
   // Page Controls
   const [activeTab, setActiveTab] = useState<'matches' | 'fixture-completo' | 'posiciones-copas' | 'standings' | 'prode-general' | 'prizes' | 'admin'>('matches');
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Manual Profile creation for the unauthenticated landing screen
   const [customName, setCustomName] = useState('');
@@ -145,12 +146,16 @@ export default function App() {
       setAllForecasts([]);
       setForecasts([]);
       setUsers([]);
+      setLoadingData(true);
       return;
     }
+
+    setLoadingData(true);
 
     // Matches List Subscription
     const unsubMatches = dbService.subscribeMatches((data) => {
       setMatches(data);
+      setLoadingData(false);
     });
 
     // General Leaderboard subscription
@@ -319,16 +324,45 @@ export default function App() {
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <AnimatePresence mode="wait">
-          {loadingAuth ? (
+          {loadingAuth || (currentUser && loadingData) ? (
             <motion.div 
               key="auth-loading" 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center p-16 space-y-4 text-center flex-1 h-[60vh]"
+              initial={{ opacity: 0, scale: 0.98 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="flex flex-col items-center justify-center p-8 sm:p-16 text-center flex-1 min-h-[55vh]"
             >
-              <div className="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm font-semibold text-slate-500 font-mono">Buscando sesión...</p>
+              {/* Elegant dual-ring orbiting soccer spinner */}
+              <div className="relative flex items-center justify-center w-28 h-28 mb-6 select-none">
+                {/* Outermost dotted orbit ring */}
+                <div className="absolute w-28 h-28 border-2 border-dashed border-blue-600/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                {/* Secondary sleek teal glass ring */}
+                <div className="absolute w-24 h-24 border-4 border-slate-100 border-t-blue-600 border-b-cyan-500 border-l-transparent border-r-transparent rounded-full animate-[spin_1.5s_linear_infinite]"></div>
+                {/* Inner glowing core wrapper with rotating ball */}
+                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center shadow-inner relative">
+                  <span className="text-4xl animate-[spin_3s_linear_infinite] inline-block filter drop-shadow">
+                    ⚽
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-base sm:text-lg font-black tracking-tight text-blue-950 uppercase">
+                  PRODE BANCO DE CORRIENTES
+                </h3>
+                <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xs mx-auto flex items-center justify-center gap-1.5 leading-relaxed">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  {loadingAuth ? "Buscando sesión actual..." : "Conectando con la base de datos..."}
+                </p>
+                <div className="pt-2">
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase bg-slate-150 rounded-full py-1 px-3.5 tracking-wider border border-slate-200 shadow-sm select-none">
+                    Cargando Fixture y Pronósticos...
+                  </span>
+                </div>
+              </div>
             </motion.div>
           ) : !currentUser ? (
             // 2. Unauthenticated Cover/Landing View
