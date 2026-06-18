@@ -80,6 +80,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
   const getTeamNameAndFlag = (teamNameWithMaybeFlag: string) => {
     const cleanName = teamNameWithMaybeFlag
       .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '')
+      .replace(/\uDB40[\uDC00-\uDFFF]/g, '')
       .trim();
     const flag = getFlagForCountry(cleanName);
     const code = getCountryCode(cleanName);

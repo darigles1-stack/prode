@@ -50,7 +50,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
   const getMatchTitle = (match: SoccerMatch) => {
     // Slice flags out or just grab first three letters of main word
     const extractName = (fullName: string) => {
-      const clean = fullName.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+      const clean = fullName.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
       return clean.slice(0, 4).toUpperCase();
     };
     return `${extractName(match.homeTeam)} vs ${extractName(match.awayTeam)}`;

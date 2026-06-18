@@ -500,7 +500,7 @@ function getKnockoutTeamInfo(teamName: string) {
     return { name: teamName, flag: "🔮", code: "", isPlaceholder: true };
   }
   
-  const clean = teamName.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+  const clean = teamName.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
   const flag = getFlagForCountry(clean);
   const code = getCountryCode(clean);
   return { name: clean, flag, code, isPlaceholder: false };

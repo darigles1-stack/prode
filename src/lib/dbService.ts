@@ -1902,6 +1902,208 @@ export const dbService = {
       localStorage.setItem('prode_enabled_phases', JSON.stringify(['grupos']));
       window.dispatchEvent(new Event('prode_db_updated'));
     }
+  },
+
+  async exportBackupData(): Promise<any> {
+    const isFirebase = shouldUseFirebase();
+    if (isFirebase) {
+      try {
+        const matchesSnap = await getDocs(collection(db, 'matches'));
+        const matches = matchesSnap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            matchDate: data.matchDate && typeof data.matchDate.toDate === 'function' ? data.matchDate.toDate().toISOString() : data.matchDate,
+            createdAt: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().toISOString() : data.createdAt
+          };
+        });
+
+        const forecastsSnap = await getDocs(collection(db, 'forecasts'));
+        const forecasts = forecastsSnap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            updatedAt: data.updatedAt && typeof data.updatedAt.toDate === 'function' ? data.updatedAt.toDate().toISOString() : data.updatedAt
+          };
+        });
+
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const users = usersSnap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            createdAt: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().toISOString() : data.createdAt,
+            updatedAt: data.updatedAt && typeof data.updatedAt.toDate === 'function' ? data.updatedAt.toDate().toISOString() : data.updatedAt
+          };
+        });
+
+        const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
+        const settings = settingsDoc.exists() ? settingsDoc.data() : { enabledPhases: ['grupos'] };
+
+        return {
+          version: '1.0',
+          exportedAt: new Date().toISOString(),
+          matches,
+          forecasts,
+          users,
+          settings
+        };
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, 'backup-export');
+        throw err;
+      }
+    } else {
+      // Local Storage Backup
+      const matches = getLocalData<any>('matches', []);
+      const forecasts = getLocalData<any>('forecasts', []);
+      const users = getLocalData<any>('users', SEED_USERS);
+      let enabledPhases = ['grupos'];
+      try {
+        const localPhases = localStorage.getItem('prode_enabled_phases');
+        if (localPhases) enabledPhases = JSON.parse(localPhases);
+      } catch {}
+
+      return {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        matches,
+        forecasts,
+        users,
+        settings: { enabledPhases }
+      };
+    }
+  },
+
+  async importBackupData(backupData: any): Promise<{ success: boolean; message: string }> {
+    if (!backupData || typeof backupData !== 'object') {
+      throw new Error('Datos de resguardo inválidos.');
+    }
+
+    const { matches = [], forecasts = [], users = [], settings = {} } = backupData;
+    const isFirebase = shouldUseFirebase();
+
+    if (isFirebase) {
+      try {
+        // 1. Clear existing collections to avoid duplicates/orphans
+        const deleteCol = async (colPath: string) => {
+          const snap = await getDocs(collection(db, colPath));
+          let batch = writeBatch(db);
+          let count = 0;
+          for (const d of snap.docs) {
+            batch.delete(doc(db, colPath, d.id));
+            count++;
+            if (count >= 400) {
+              await batch.commit();
+              batch = writeBatch(db);
+              count = 0;
+            }
+          }
+          if (count > 0) {
+            await batch.commit();
+          }
+        };
+
+        await deleteCol('matches');
+        await deleteCol('forecasts');
+        await deleteCol('users');
+
+        // 2. Insert new docs
+        let batch = writeBatch(db);
+        let writeCount = 0;
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 400) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
+        for (const m of matches) {
+          const mDocRef = doc(db, 'matches', m.id);
+          const matchPayload = {
+            homeTeam: m.homeTeam,
+            awayTeam: m.awayTeam,
+            matchDate: m.matchDate ? Timestamp.fromDate(new Date(m.matchDate)) : Timestamp.now(),
+            status: m.status || 'pending',
+            phase: m.phase || 'grupos',
+            createdAt: m.createdAt ? Timestamp.fromDate(new Date(m.createdAt)) : Timestamp.now(),
+            homeScore: m.homeScore !== undefined && m.homeScore !== null ? Number(m.homeScore) : null,
+            awayScore: m.awayScore !== undefined && m.awayScore !== null ? Number(m.awayScore) : null,
+          };
+          batch.set(mDocRef, matchPayload);
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // Insert forecasts
+        for (const f of forecasts) {
+          const fDocRef = doc(db, 'forecasts', f.id);
+          const forecastPayload = {
+            userId: f.userId,
+            matchId: f.matchId,
+            homeScore: Number(f.homeScore),
+            awayScore: Number(f.awayScore),
+            pointsEarned: f.pointsEarned !== undefined && f.pointsEarned !== null ? Number(f.pointsEarned) : null,
+            updatedAt: f.updatedAt ? Timestamp.fromDate(new Date(f.updatedAt)) : Timestamp.now(),
+          };
+          batch.set(fDocRef, forecastPayload);
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // Insert users
+        for (const u of users) {
+          const uDocRef = doc(db, 'users', u.id || u.uid);
+          const userPayload = {
+            uid: u.uid || u.id,
+            name: u.name,
+            email: u.email,
+            photoURL: u.photoURL || '',
+            points: u.points !== undefined ? Number(u.points) : 0,
+            isAdmin: !!u.isAdmin,
+            isBanned: !!u.isBanned,
+            legajo: u.legajo || '',
+            gerencia: u.gerencia || '',
+            createdAt: u.createdAt ? Timestamp.fromDate(new Date(u.createdAt)) : Timestamp.now(),
+            updatedAt: u.updatedAt ? Timestamp.fromDate(new Date(u.updatedAt)) : Timestamp.now(),
+          };
+          batch.set(uDocRef, userPayload);
+          writeCount++;
+          await checkAndCommitBatch();
+        }
+
+        // Set Settings Config
+        const settingsRef = doc(db, 'settings', 'config');
+        const enabledPhases = settings.enabledPhases || ['grupos'];
+        batch.set(settingsRef, { enabledPhases }, { merge: true });
+        writeCount++;
+
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+
+        // Refresh calculations
+        await this.syncUserForecastsAndPoints();
+
+        return { success: true, message: 'Restauración importada con éxito.' };
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'backup-import');
+        throw err;
+      }
+    } else {
+      // Local Storage Import Restore
+      setLocalData('matches', matches);
+      setLocalData('forecasts', forecasts);
+      setLocalData('users', users);
+      if (settings.enabledPhases) {
+        localStorage.setItem('prode_enabled_phases', JSON.stringify(settings.enabledPhases));
+      }
+      window.dispatchEvent(new Event('prode_db_updated'));
+      return { success: true, message: 'Restauración local importada con éxito.' };
+    }
   }
 };
 

@@ -76,12 +76,12 @@ export const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 export const getFlagForCountry = (name: string): string => {
-  const clean = name.trim();
+  const clean = name.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
   return COUNTRY_FLAGS[clean] || "🏳️";
 };
 
 export const getCountryCode = (name: string): string => {
-  const clean = name.trim();
+  const clean = name.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').trim();
   const codes: Record<string, string> = {
     "México": "mx",
     "Sudáfrica": "za",

@@ -32,8 +32,8 @@ export const FixtureCompleto: React.FC<FixtureCompletoProps> = ({ matches, forec
 
     return matches.find(m => {
       // Clean DB team names from emojis just in case
-      const dbHomeClean = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').toLowerCase().trim();
-      const dbAwayClean = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').toLowerCase().trim();
+      const dbHomeClean = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').toLowerCase().trim();
+      const dbAwayClean = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').replace(/\uDB40[\uDC00-\uDFFF]/g, '').toLowerCase().trim();
 
       return (
         (dbHomeClean.includes(localLower) || localLower.includes(dbHomeClean)) &&
