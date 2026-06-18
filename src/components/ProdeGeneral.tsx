@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Info, Grid, Trophy, CheckSquare, Sparkles, Filter, Calendar, Lock } from 'lucide-react';
+import { Search, Info, Grid, Trophy, CheckSquare, Sparkles, Filter, Calendar, Lock, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { SoccerMatch, Standing, UserForecast } from '../types';
 
 interface ProdeGeneralProps {
@@ -188,7 +188,18 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                     >
                       {/* Position */}
                       <td className="py-3.5 px-4 text-center sticky left-0 bg-white font-mono font-bold border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        #{userRow.position}
+                        <div className="flex items-center justify-center space-x-1 font-mono">
+                          <span>#{userRow.position}</span>
+                          {userRow.positionTrend === 'up' && (
+                            <ArrowUp className="h-3 w-3 text-emerald-500 stroke-[3px] shrink-0" title="Subió puestos en la última fecha" />
+                          )}
+                          {userRow.positionTrend === 'down' && (
+                            <ArrowDown className="h-3 w-3 text-rose-500 stroke-[3px] shrink-0" title="Bajó puestos en la última fecha" />
+                          )}
+                          {(userRow.positionTrend === 'same' || !userRow.positionTrend) && (
+                            <Minus className="h-3 w-3 text-slate-300 stroke-[3px] shrink-0" title="Mantuvo su posición" />
+                          )}
+                        </div>
                       </td>
 
                       {/* Participant block */}

@@ -830,12 +830,14 @@ export const dbService = {
     if (shouldUseFirebase()) {
       let users: UserProfile[] = [];
       let forecasts: UserForecast[] = [];
+      let matches: SoccerMatch[] = [];
       let usersLoaded = false;
       let forecastsLoaded = false;
+      let matchesLoaded = false;
 
       const triggerCallback = () => {
-        if (usersLoaded && forecastsLoaded) {
-          const standings = computeStandings(users, forecasts);
+        if (usersLoaded && forecastsLoaded && matchesLoaded) {
+          const standings = computeStandings(users, forecasts, matches);
           callback(standings);
         }
       };
@@ -888,22 +890,54 @@ export const dbService = {
         handleFirestoreError(error, OperationType.LIST, 'forecasts');
       });
 
+      const unsubMatches = onSnapshot(collection(db, 'matches'), (snapshot) => {
+        matches = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          let matchDate = '';
+          if (data.matchDate instanceof Timestamp) {
+            matchDate = data.matchDate.toDate().toISOString();
+          } else {
+            matchDate = data.matchDate;
+          }
+          matches.push({
+            id: doc.id,
+            homeTeam: data.homeTeam,
+            awayTeam: data.awayTeam,
+            matchDate,
+            homeScore: data.homeScore ?? null,
+            awayScore: data.awayScore ?? null,
+            status: data.status,
+            phase: data.phase,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+            updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt
+          } as SoccerMatch);
+        });
+        matchesLoaded = true;
+        triggerCallback();
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'matches');
+      });
+
       return () => {
         unsubUsers();
         unsubForecasts();
+        unsubMatches();
       };
     } else {
       // Offline simulation
       const users = getLocalData<UserProfile>('users', SEED_USERS);
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
       
-      const standings = computeStandings(users, forecasts);
+      const standings = computeStandings(users, forecasts, matches);
       callback(standings);
 
       const listener = () => {
         const u = getLocalData<UserProfile>('users', SEED_USERS);
         const f = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
-        callback(computeStandings(u, f));
+        const m = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+        callback(computeStandings(u, f, m));
       };
       window.addEventListener('prode_db_updated', listener);
       return () => window.removeEventListener('prode_db_updated', listener);
@@ -2108,7 +2142,7 @@ export const dbService = {
 };
 
 // Standings calculation helper
-function computeStandings(users: UserProfile[], forecasts: UserForecast[]): Standing[] {
+function computeStandings(users: UserProfile[], forecasts: UserForecast[], matches?: SoccerMatch[]): Standing[] {
   const standingsMap: { [userId: string]: Standing } = {};
 
   // Filter out banned users from participating in rankings/standings blocks
@@ -2117,6 +2151,7 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[]): Stan
   activeUsers.forEach(u => {
     standingsMap[u.uid] = {
       position: 0,
+      positionTrend: 'same',
       userId: u.uid,
       userName: u.name,
       userEmail: u.email,
@@ -2149,9 +2184,84 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[]): Stan
     return b.forecastsCount - a.forecastsCount; // More predictions is a tie-breaker
   });
 
-  // Assign position index
-  return list.map((item, index) => ({
+  const rankedList = list.map((item, index) => ({
     ...item,
     position: index + 1
   }));
+
+  // Now, calculate the positionTrend if we have matches!
+  if (matches && matches.length > 0) {
+    const finishedMatches = matches.filter(m => m.status === 'finished');
+    if (finishedMatches.length > 0) {
+      // Sort finished matches by date
+      const sortedFinished = [...finishedMatches].sort((a, b) => {
+        return new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime();
+      });
+
+      // Let's identify the most recently finished match
+      const lastFinished = sortedFinished[sortedFinished.length - 1];
+      const lastMatchId = lastFinished.id;
+
+      // Create a map to compute what the previous scores would be
+      const prevStandingsMap: { [userId: string]: { points: number; exactHits: number; forecastsCount: number } } = {};
+      activeUsers.forEach(u => {
+        prevStandingsMap[u.uid] = {
+          points: u.points || 0,
+          exactHits: standingsMap[u.uid]?.exactHitsCount || 0,
+          forecastsCount: standingsMap[u.uid]?.forecastsCount || 0
+        };
+      });
+
+      // Subtract the points earned from the last finished match to find previous score/tier
+      forecasts.forEach(f => {
+        if (f.matchId === lastMatchId && f.pointsEarned !== null && f.pointsEarned !== undefined) {
+          const uPrev = prevStandingsMap[f.userId];
+          if (uPrev) {
+            uPrev.points -= f.pointsEarned;
+            if (f.pointsEarned === 3) {
+              uPrev.exactHits -= 1;
+            }
+            uPrev.forecastsCount -= 1;
+          }
+        }
+      });
+
+      // Sort and rank the previous list
+      const prevListRanked = Object.keys(prevStandingsMap).map(uid => ({
+        userId: uid,
+        points: prevStandingsMap[uid].points,
+        exactHits: prevStandingsMap[uid].exactHits,
+        forecastsCount: prevStandingsMap[uid].forecastsCount
+      })).sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.exactHits !== a.exactHits) return b.exactHits - a.exactHits;
+        return b.forecastsCount - a.forecastsCount;
+      });
+
+      const previousRanksMap: { [userId: string]: number } = {};
+      prevListRanked.forEach((item, idx) => {
+        previousRanksMap[item.userId] = idx + 1;
+      });
+
+      // Apply the trends to the current rankedList!
+      rankedList.forEach(item => {
+        const prevRank = previousRanksMap[item.userId];
+        if (prevRank) {
+          item.previousPosition = prevRank;
+          if (prevRank > item.position) {
+            item.positionTrend = 'up';
+          } else if (prevRank < item.position) {
+            item.positionTrend = 'down';
+          } else {
+            item.positionTrend = 'same';
+          }
+        } else {
+          item.previousPosition = item.position;
+          item.positionTrend = 'same';
+        }
+      });
+    }
+  }
+
+  return rankedList;
 }

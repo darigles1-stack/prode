@@ -40,6 +40,8 @@ export interface UserForecast {
 
 export interface Standing {
   position: number;
+  positionTrend?: 'up' | 'down' | 'same';
+  previousPosition?: number;
   userId: string;
   userName: string;
   userEmail: string;

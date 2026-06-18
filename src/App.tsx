@@ -15,7 +15,14 @@ import {
   AlertTriangle,
   Info,
   Grid,
-  Award
+  Award,
+  Sparkles,
+  TrendingUp,
+  Target,
+  CheckCircle,
+  ArrowUp,
+  ArrowDown,
+  Minus
 } from 'lucide-react';
 // @ts-ignore
 import bancoLogo from './assets/images/banco_logo_1781105885770.png';
@@ -308,6 +315,17 @@ export default function App() {
 
   // Display status of User Role
   const isUserAdmin = currentUser?.isAdmin || currentUser?.email === 'darigles1@gmail.com';
+
+  // Find current user's placement and statistics in the standings
+  const userStanding = currentUser ? standings.find(s => s.userId === currentUser.uid) : null;
+  const userRank = userStanding ? userStanding.position : null;
+  const prevRank = userStanding ? (userStanding.previousPosition ?? userStanding.position) : null;
+  const userTrend = userStanding ? userStanding.positionTrend : 'same';
+  const totalCompetitors = standings.length;
+  const userPoints = userStanding ? userStanding.points : (currentUser?.points || 0);
+  const exactHits = userStanding ? (userStanding.exactHitsCount || 0) : 0;
+  const outcomeHits = userStanding ? (userStanding.outcomeHitsCount || 0) : 0;
+  const totalForecasts = userStanding ? (userStanding.forecastsCount || 0) : 0;
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
@@ -648,6 +666,109 @@ export default function App() {
                   >
                     ✏️ Modificar mis datos de legajo
                   </button>
+                </div>
+              )}
+
+              {/* COMPLEMENTO VISUAL: PANEL PRINCIPAL DE RENDIMIENTO Y ESTADÍSTICAS - VERSIÓN ULTRA COMPACTA (REDUCIDA AL 50%) */}
+              {currentUser && (
+                <div id="user-performance-dashboard-hero" className="bg-gradient-to-r from-blue-950 to-indigo-950 rounded-2xl p-3 md:p-3.5 text-white shadow-md border border-blue-800/60 relative overflow-hidden text-left my-3 w-full">
+                  {/* Decorative faint background watermark */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none select-none">
+                    <Trophy className="h-16 w-16 text-yellow-300" />
+                  </div>
+
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 relative z-10">
+                    {/* Left header identification */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="bg-yellow-400/10 p-1.5 rounded-lg border border-yellow-400/20 shrink-0">
+                        <Sparkles className="h-4 w-4 text-yellow-400" />
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-extrabold text-blue-300 tracking-wider uppercase leading-none">Mi Desempeño Oficial</div>
+                        <div className="text-xs font-black text-white flex items-center gap-1.5 mt-0.5">
+                          <span className="truncate max-w-[130px]">{currentUser.name || 'Mi Cuenta'}</span>
+                          {userRank && (
+                            <span className="text-[9px] bg-emerald-500/25 text-emerald-300 font-extrabold px-1.5 py-0.5 rounded-md border border-emerald-500/35">
+                              Top {Math.max(1, Math.round((userRank / totalCompetitors) * 100))}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats horizontal strip - Ultra space saver */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-grow md:flex-initial md:min-w-[620px]">
+                      {/* PUNTOS */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Puntos</div>
+                          <div className="text-base font-black text-yellow-300 font-mono leading-tight">{userPoints}</div>
+                        </div>
+                        <Target className="h-3.5 w-3.5 text-yellow-400/70 shrink-0" />
+                      </div>
+
+                      {/* POSICIÓN */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Puesto Actual</div>
+                          <div className="text-base font-black text-emerald-300 font-mono leading-tight">
+                            {userRank !== null ? `#${userRank}` : 'S/D'}
+                          </div>
+                          {prevRank !== null && (
+                            <div className="text-[8.5px] text-indigo-200/80 font-bold font-mono mt-0.5">
+                              Anterior: #{prevRank}
+                            </div>
+                          )}
+                        </div>
+                        <TrendingUp className="h-3.5 w-3.5 text-emerald-400/70 shrink-0" />
+                      </div>
+
+                      {/* TENDENCIA */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Tendencia</div>
+                          <div className="text-[11px] font-black leading-tight flex items-center gap-1 mt-0.5">
+                            {userTrend === 'up' && (
+                              <span className="text-emerald-400 flex items-center gap-0.5" title="¡Subiste posiciones en la última fecha!">
+                                <ArrowUp className="h-3.5 w-3.5 stroke-[3px]" />
+                                Subió
+                              </span>
+                            )}
+                            {userTrend === 'down' && (
+                              <span className="text-rose-450 flex items-center gap-0.5" title="Bajaste posiciones en la última fecha">
+                                <ArrowDown className="h-3.5 w-3.5 stroke-[3px]" />
+                                Bajó
+                              </span>
+                            )}
+                            {(userTrend === 'same' || !userTrend) && (
+                              <span className="text-slate-300 flex items-center gap-0.5" title="Mantuviste tu posición">
+                                <Minus className="h-3 w-3 stroke-[3px]" />
+                                Igual
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* PLENOS */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Plenos (3p)</div>
+                          <div className="text-base font-black text-cyan-300 font-mono leading-tight">{exactHits}</div>
+                        </div>
+                        <Award className="h-3.5 w-3.5 text-cyan-400/70 shrink-0" />
+                      </div>
+
+                      {/* ACIERTOS */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Aciertos (1p)</div>
+                          <div className="text-base font-black text-purple-300 font-mono leading-tight">{outcomeHits}</div>
+                        </div>
+                        <CheckCircle className="h-3.5 w-3.5 text-purple-400/70 shrink-0" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trophy, Medal, SearchX, Sparkles, Star, CheckCircle2 } from 'lucide-react';
+import { Search, Trophy, Medal, SearchX, Sparkles, Star, CheckCircle2, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react';
 import { Standing, UserProfile } from '../types';
 
 interface LeaderboardProps {
@@ -207,6 +207,7 @@ Kit de aliento:
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[11px] font-semibold uppercase tracking-wider border-b border-slate-100">
                   <th className="py-3.5 px-5 text-center w-16">Pos</th>
+                  <th className="py-3.5 px-3 text-center w-24">Tendencia</th>
                   <th className="py-3.5 px-3 animate-fadeIn">Participante</th>
                   <th className="py-3.5 px-3 hidden md:table-cell">Legajo / Gerencia</th>
                   <th className="py-3.5 px-3 text-center">Puntos</th>
@@ -218,44 +219,141 @@ Kit de aliento:
               <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
                 {filteredStandings.map((row) => {
                   const isCurrent = currentUser && row.userId === currentUser.uid;
+                  const isFirst = row.position === 1;
+                  const isSecond = row.position === 2;
+                  const isThird = row.position === 3;
+                  const isTop3 = isFirst || isSecond || isThird;
+
+                  let rowBgClass = '';
+                  if (isCurrent) {
+                    rowBgClass = 'bg-blue-50 hover:bg-blue-100/65 border-l-[4px] border-l-blue-600';
+                  } else if (isFirst) {
+                    rowBgClass = 'bg-amber-50/40 hover:bg-amber-100/30 border-l-[4px] border-l-amber-500 font-semibold';
+                  } else if (isSecond) {
+                    rowBgClass = 'bg-slate-50/40 hover:bg-slate-100/30 border-l-[4px] border-l-slate-400 font-semibold';
+                  } else if (isThird) {
+                    rowBgClass = 'bg-orange-50/15 hover:bg-orange-100/20 border-l-[4px] border-l-amber-600/70 font-semibold';
+                  } else {
+                    rowBgClass = 'hover:bg-slate-50/80';
+                  }
+
                   return (
                     <tr
                       key={row.userId}
-                      className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? 'bg-blue-50 hover:bg-blue-100/60 font-medium' : ''
-                        }`}
+                      className={`transition-colors ${rowBgClass}`}
                     >
                       {/* Position Cell */}
                       <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold leading-none ${row.position === 1 ? 'bg-amber-100 text-amber-800' :
-                          row.position === 2 ? 'bg-slate-100 text-slate-700' :
-                            row.position === 3 ? 'bg-amber-50 text-amber-700' :
-                              'text-slate-500'
-                          }`}>
-                          {row.position}
-                        </span>
+                        {isFirst ? (
+                          <div className="flex items-center justify-center relative">
+                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-black leading-none bg-gradient-to-br from-amber-400 via-yellow-200 to-amber-500 text-yellow-950 shadow-[0_2px_8px_rgba(234,179,8,0.35)] border border-amber-300 relative z-10 transition-transform hover:scale-105">
+                              1
+                            </span>
+                            <Crown className="absolute -top-2.5 h-4 w-4 text-amber-500 fill-amber-300 rotate-12 z-20 animate-pulse" />
+                          </div>
+                        ) : isSecond ? (
+                          <div className="flex items-center justify-center relative">
+                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-black leading-none bg-gradient-to-br from-slate-300 via-slate-100 to-slate-450 text-slate-800 shadow-[0_2px_8px_rgba(148,163,184,0.25)] border border-slate-200 relative z-10 transition-transform hover:scale-105">
+                              2
+                            </span>
+                          </div>
+                        ) : isThird ? (
+                          <div className="flex items-center justify-center relative">
+                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-black leading-none bg-gradient-to-br from-amber-650 via-amber-500 to-amber-700 text-amber-50 shadow-[0_2px_8px_rgba(180,83,9,0.25)] border border-amber-550 relative z-10 transition-transform hover:scale-105">
+                              3
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold leading-none text-slate-500">
+                            {row.position}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Trend Cell */}
+                      <td className="py-4 px-3 text-center">
+                        <div className="flex items-center justify-center">
+                          {row.positionTrend === 'up' && (
+                            <div className="inline-flex items-center gap-1 text-emerald-600 font-extrabold text-[10px] bg-emerald-100/60 border border-emerald-300/60 px-2 py-0.5 rounded-full shadow-[0_1px_2px_rgba(16,185,129,0.05)]" title="Subió puestos en la última fecha terminado">
+                              <ArrowUp className="h-3.5 w-3.5 stroke-[3px] text-emerald-600" />
+                              <span>Subió</span>
+                            </div>
+                          )}
+                          {row.positionTrend === 'down' && (
+                            <div className="inline-flex items-center gap-1 text-rose-600 font-extrabold text-[10px] bg-rose-100/60 border border-rose-300/60 px-2 py-0.5 rounded-full shadow-[0_1px_2px_rgba(239,68,68,0.05)]" title="Bajó puestos en la última fecha terminado">
+                              <ArrowDown className="h-3.5 w-3.5 stroke-[3px] text-rose-600" />
+                              <span>Bajó</span>
+                            </div>
+                          )}
+                          {(row.positionTrend === 'same' || !row.positionTrend) && (
+                            <div className="inline-flex items-center gap-1 text-slate-500 font-bold text-[10px] bg-slate-100/80 border border-slate-300/40 px-2 py-0.5 rounded-full" title="Mantuvo su posición en la última fecha">
+                              <Minus className="h-3 w-3 stroke-[3px] text-slate-400" />
+                              <span>Igual</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Participant Cell */}
                       <td className="py-4 px-3 text-left">
                         <div className="flex items-center space-x-3">
                           {row.photoURL ? (
-                            <img src={row.photoURL} alt={row.userName} className="h-8 w-8 rounded-full border" />
+                            <img 
+                              src={row.photoURL} 
+                              alt={row.userName} 
+                              className={`rounded-full border object-cover shrink-0 ${
+                                isFirst ? 'h-10 w-10 border-amber-300 ring-2 ring-amber-400/20 shadow-sm' :
+                                isSecond ? 'h-9.5 w-9.5 border-slate-300 ring-2 ring-slate-400/10' :
+                                isThird ? 'h-9 w-9 border-amber-500/50 ring-2 ring-amber-500/10' :
+                                'h-8 w-8'
+                              }`} 
+                            />
                           ) : (
-                            <div className="h-8 w-8 rounded-full bg-slate-100 border text-slate-700 flex items-center justify-center font-bold text-xs uppercase">
+                            <div className={`rounded-full flex items-center justify-center font-bold uppercase shrink-0 ${
+                              isFirst ? 'h-10 w-10 bg-amber-100 text-amber-800 border-2 border-amber-300 text-sm shadow-sm' :
+                              isSecond ? 'h-9.5 w-9.5 bg-slate-100 text-slate-800 border-2 border-slate-300 text-sm' :
+                              isThird ? 'h-9 w-9 bg-amber-50/80 text-amber-900 border-2 border-amber-500/40 text-xs' :
+                              'h-8 w-8 bg-slate-100 border text-slate-700 text-xs'
+                            }`}>
                               {row.userName.charAt(0)}
                             </div>
                           )}
                           <div>
-                            <div className="flex items-center space-x-1.5 text-left justify-start">
-                              <span className="text-slate-900 font-semibold">{row.userName}</span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-left justify-start">
+                              <span className={`text-slate-900 font-semibold leading-tight ${
+                                isFirst ? 'text-base font-black text-amber-950' :
+                                isSecond ? 'text-[15px] font-bold text-slate-900' :
+                                isThird ? 'text-[14.5px] font-medium text-slate-850' :
+                                'text-sm'
+                              }`}>
+                                {row.userName}
+                              </span>
+                              {isFirst && (
+                                <span className="bg-amber-100/90 text-amber-900 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-amber-300/60 flex items-center gap-0.5 shadow-sm shrink-0 select-none">
+                                  <Trophy className="h-2.5 w-2.5 text-amber-600 fill-amber-500 animate-pulse" />
+                                  Puntero
+                                </span>
+                              )}
+                              {isSecond && (
+                                <span className="bg-slate-100 text-slate-800 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 flex items-center gap-0.5 shrink-0 select-none">
+                                  <Medal className="h-2.5 w-2.5 text-slate-500 fill-slate-300" />
+                                  Escolta
+                                </span>
+                              )}
+                              {isThird && (
+                                <span className="bg-orange-50 text-amber-900 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-amber-300/40 flex items-center gap-0.5 shrink-0 select-none">
+                                  <Medal className="h-2.5 w-2.5 text-amber-600 fill-amber-400" />
+                                  Tercero
+                                </span>
+                              )}
                               {isCurrent && (
-                                <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                <span className="bg-blue-100 text-blue-900 text-[9px] font-black px-2 py-0.5 rounded-full border border-blue-200 uppercase tracking-wider shrink-0 select-none">
                                   Tú
                                 </span>
                               )}
                             </div>
                             <div className="text-left flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                              <span className="text-xs text-slate-400 font-mono">{row.userEmail}</span>
+                              <span className={`text-slate-400 font-mono text-xs ${isFirst ? 'font-medium' : ''}`}>{row.userEmail}</span>
                               {/* Mobile/Compact badges fallback */}
                               <div className="flex flex-wrap gap-1 mt-1 sm:mt-0 md:hidden">
                                 {row.legajo && (
@@ -294,7 +392,12 @@ Kit de aliento:
 
                       {/* Points Cell */}
                       <td className="py-4 px-3 text-center">
-                        <span className="text-sm font-extrabold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full font-mono">
+                        <span className={`font-mono leading-none ${
+                          isFirst ? 'text-base font-black text-amber-800 bg-amber-100/75 px-3 py-1.5 rounded-full border border-amber-300 shadow-sm' :
+                          isSecond ? 'text-sm font-black text-slate-850 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200' :
+                          isThird ? 'text-sm font-black text-amber-900 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/40' :
+                          'text-sm font-extrabold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full'
+                        }`}>
                           {row.points}
                         </span>
                       </td>
