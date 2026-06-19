@@ -342,6 +342,9 @@ export default function App() {
   const exactHits = userStanding ? (userStanding.exactHitsCount || 0) : 0;
   const outcomeHits = userStanding ? (userStanding.outcomeHitsCount || 0) : 0;
   const totalForecasts = userStanding ? (userStanding.forecastsCount || 0) : 0;
+  const totalMatches = matches.length;
+  const finishedMatches = matches.filter(m => m.status === 'finished').length;
+  const remainingMatches = totalMatches - finishedMatches;
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
@@ -713,7 +716,7 @@ export default function App() {
                     </div>
 
                     {/* Stats horizontal strip - Ultra space saver */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-grow md:flex-initial md:min-w-[620px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 flex-grow md:flex-initial md:min-w-[700px]">
                       {/* PUNTOS */}
                       <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
                         <div>
@@ -787,6 +790,16 @@ export default function App() {
                           <div className="text-base font-black text-purple-300 font-mono leading-tight">{outcomeHits}</div>
                         </div>
                         <CheckCircle className="h-3.5 w-3.5 text-purple-400/70 shrink-0" />
+                      </div>
+
+                      {/* PARTIDOS RESTANTES */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 flex items-center justify-between gap-2 hover:bg-white/[8%] transition-colors">
+                        <div>
+                          <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Partidos Rest.</div>
+                          <div className="text-base font-black text-orange-300 font-mono leading-tight">{remainingMatches}</div>
+                          <div className="text-[8.5px] text-white/50 font-bold mt-0.5 whitespace-nowrap">de {totalMatches} totales</div>
+                        </div>
+                        <Calendar className="h-3.5 w-3.5 text-orange-400/70 shrink-0" />
                       </div>
                     </div>
                   </div>

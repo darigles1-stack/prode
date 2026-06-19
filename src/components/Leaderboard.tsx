@@ -43,100 +43,177 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
 
       {/* Visual Podium Highlights */}
       {standings.length > 0 && (
-        <div className="bg-blue-950 border border-blue-900 rounded-2xl p-6 shadow-md">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-6 flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-amber-400" />
-            <span>Podio de Líderes</span>
+        <div
+          className="rounded-3xl p-6 shadow-xl overflow-hidden relative"
+          style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}
+        >
+          {/* Decorative background sparkles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-4 right-8 w-1 h-1 bg-yellow-400 rounded-full opacity-60 animate-ping" style={{ animationDuration: '3s' }} />
+            <div className="absolute top-12 right-20 w-1.5 h-1.5 bg-blue-400 rounded-full opacity-40 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            <div className="absolute top-6 left-12 w-1 h-1 bg-purple-400 rounded-full opacity-50 animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+            <div className="absolute bottom-12 left-6 w-1.5 h-1.5 bg-yellow-300 rounded-full opacity-30 animate-ping" style={{ animationDuration: '3.5s', animationDelay: '0.8s' }} />
+            <div className="absolute bottom-8 right-10 w-1 h-1 bg-indigo-400 rounded-full opacity-50 animate-ping" style={{ animationDuration: '2.8s', animationDelay: '1.5s' }} />
+          </div>
+
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2 relative z-10 select-none">
+            <Trophy className="h-4 w-4 text-yellow-400" />
+            <span>Podio de Líderes BanCo</span>
           </h3>
 
-          <div className="grid grid-cols-3 items-end gap-2 md:gap-4 max-w-lg mx-auto pt-4 pb-2">
-            {/* 2nd Place */}
-            <div className="flex flex-col items-center">
+          <div className="grid grid-cols-3 items-end gap-3 md:gap-5 max-w-lg mx-auto pb-2 relative z-10">
+
+            {/* ─── 2nd Place ─── */}
+            <div className="flex flex-col items-center group/step transition-all duration-300 hover:-translate-y-1">
               {secondPlace ? (
                 <>
-                  <div className="relative group flex flex-col items-center">
-                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-slate-700 border-2 border-slate-300 flex items-center justify-center font-bold text-white text-base overflow-hidden">
+                  <div className="relative flex flex-col items-center mb-3">
+                    {/* Glow ring */}
+                    <div className="absolute inset-0 rounded-full opacity-0 group-hover/step:opacity-100 transition-opacity duration-300"
+                      style={{ boxShadow: '0 0 20px 6px rgba(148,163,184,0.4)', borderRadius: '9999px' }} />
+                    <div
+                      className="h-14 w-14 md:h-16 md:w-16 rounded-full flex items-center justify-center font-bold text-base overflow-hidden transition-all duration-300 group-hover/step:scale-110"
+                      style={{ border: '3px solid #94a3b8', boxShadow: '0 0 0 3px rgba(148,163,184,0.25), 0 4px 20px rgba(0,0,0,0.5)' }}
+                    >
                       {secondPlace.photoURL ? (
                         <img src={secondPlace.photoURL} alt={secondPlace.userName} className="h-full w-full object-cover" />
                       ) : (
-                        secondPlace.userName.charAt(0).toUpperCase()
+                        <div className="h-full w-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #475569, #334155)' }}>
+                          <span className="text-xl font-black text-slate-200">{secondPlace.userName.charAt(0).toUpperCase()}</span>
+                        </div>
                       )}
                     </div>
-                    <span className="absolute -top-3 bg-slate-300 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow border border-slate-400">
-                      2°
-                    </span>
+                    {/* Medal badge */}
+                    <span
+                      className="absolute -bottom-2 text-[10px] font-black px-2 py-0.5 rounded-full select-none"
+                      style={{ background: 'linear-gradient(135deg, #94a3b8, #64748b)', color: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+                    >🥈 2°</span>
                   </div>
-                  <div className="text-center mt-2 max-w-[90px] truncate">
-                    <div className="font-semibold text-xs text-slate-200">{secondPlace.userName}</div>
-                    <div className="font-mono text-yellow-400 text-xs font-bold">{secondPlace.points} pts</div>
+                  <div className="text-center w-full px-1 mt-1">
+                    <div className="font-bold text-xs text-white truncate drop-shadow">{secondPlace.userName}</div>
+                    <div className="font-mono text-slate-400 text-[11px] font-extrabold mt-0.5">{secondPlace.points} pts</div>
                   </div>
                 </>
               ) : (
-                <div className="text-slate-600 text-xs">-</div>
+                <div className="text-slate-600 text-[10px] italic mb-2">Vacante</div>
               )}
-              <div className="w-full bg-slate-800 border-t border-slate-700 h-16 rounded-t-xl mt-3 flex items-center justify-center shadow">
-                <Medal className="h-6 w-6 text-slate-400 opacity-60" />
+              {/* Pedestal */}
+              <div
+                className="w-full h-16 rounded-t-xl mt-4 flex items-center justify-center relative overflow-hidden"
+                style={{ background: 'linear-gradient(180deg, #475569 0%, #334155 60%, #1e293b 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 -2px 8px rgba(0,0,0,0.3)' }}
+              >
+                <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #94a3b8, transparent)' }} />
+                <span className="text-4xl font-black font-mono select-none" style={{ color: 'rgba(148,163,184,0.5)' }}>2</span>
               </div>
+              {/* Metal label */}
+              <div className="mt-1.5 px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase select-none"
+                style={{ background: 'linear-gradient(135deg, #94a3b8, #64748b)', color: '#fff', boxShadow: '0 1px 6px rgba(148,163,184,0.4)' }}
+              >🥈 Plata</div>
             </div>
 
-            {/* 1st Place */}
-            <div className="flex flex-col items-center">
+            {/* ─── 1st Place ─── */}
+            <div className="flex flex-col items-center group/step transition-all duration-300 hover:-translate-y-2">
               {firstPlace ? (
                 <>
-                  <div className="relative flex flex-col items-center">
-                    <Star className="h-4 w-4 text-amber-400 absolute -top-4 animate-bounce" />
-                    <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-slate-700 border-2 border-amber-400 flex items-center justify-center font-bold text-white text-lg overflow-hidden shadow-lg shadow-amber-955">
+                  {/* Crown with glow */}
+                  <div className="relative mb-1">
+                    <Crown className="h-6 w-6 fill-yellow-400 text-yellow-300 animate-bounce drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 8px rgba(250,204,21,0.8))' }} />
+                  </div>
+                  <div className="relative flex flex-col items-center mb-3">
+                    {/* Gold glow ring */}
+                    <div className="absolute inset-0 rounded-full transition-opacity duration-300 opacity-70 group-hover/step:opacity-100"
+                      style={{ boxShadow: '0 0 25px 8px rgba(250,204,21,0.35)', borderRadius: '9999px' }} />
+                    <div
+                      className="h-18 w-18 md:h-20 md:w-20 rounded-full flex items-center justify-center font-bold text-lg overflow-hidden transition-all duration-300 group-hover/step:scale-110"
+                      style={{
+                        width: '4.5rem', height: '4.5rem',
+                        border: '3px solid #facc15',
+                        boxShadow: '0 0 0 4px rgba(250,204,21,0.2), 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'
+                      }}
+                    >
                       {firstPlace.photoURL ? (
                         <img src={firstPlace.photoURL} alt={firstPlace.userName} className="h-full w-full object-cover" />
                       ) : (
-                        firstPlace.userName.charAt(0).toUpperCase()
+                        <div className="h-full w-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #92400e, #78350f)' }}>
+                          <span className="text-2xl font-black text-yellow-200">{firstPlace.userName.charAt(0).toUpperCase()}</span>
+                        </div>
                       )}
                     </div>
-                    <span className="absolute -top-3 bg-amber-400 text-amber-955 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md border border-amber-300">
-                      1°
-                    </span>
+                    {/* Gold badge */}
+                    <span
+                      className="absolute -bottom-2 text-[10px] font-black px-2.5 py-0.5 rounded-full select-none"
+                      style={{ background: 'linear-gradient(135deg, #facc15, #f59e0b)', color: '#451a03', boxShadow: '0 2px 8px rgba(250,204,21,0.5)' }}
+                    >👑 1°</span>
                   </div>
-                  <div className="text-center mt-2 max-w-[100px] truncate">
-                    <div className="font-bold text-sm text-amber-300">{firstPlace.userName}</div>
-                    <div className="font-mono text-yellow-400 text-sm font-extrabold">{firstPlace.points} pts</div>
+                  <div className="text-center w-full px-1 mt-1">
+                    <div className="font-extrabold text-sm text-white truncate" style={{ textShadow: '0 0 20px rgba(250,204,21,0.4)' }}>{firstPlace.userName}</div>
+                    <div className="font-mono text-yellow-400 text-xs font-black mt-0.5">{firstPlace.points} pts</div>
                   </div>
                 </>
               ) : (
-                <div className="text-slate-600 text-xs">-</div>
+                <div className="text-slate-600 text-[10px] italic mb-2">Vacante</div>
               )}
-              <div className="w-full bg-gradient-to-b from-blue-900 to-slate-800 border-t border-blue-500/30 h-24 rounded-t-xl mt-3 flex items-center justify-center shadow-lg shadow-blue-950/40">
-                <Trophy className="h-8 w-8 text-yellow-400" />
+              {/* Tallest pedestal */}
+              <div
+                className="w-full h-24 rounded-t-xl mt-4 flex items-center justify-center relative overflow-hidden"
+                style={{ background: 'linear-gradient(180deg, #854d0e 0%, #713f12 50%, #3f1d07 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 -2px 12px rgba(0,0,0,0.4)' }}
+              >
+                <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #facc15, transparent)' }} />
+                <span className="text-5xl font-black font-mono select-none" style={{ color: 'rgba(250,204,21,0.35)' }}>1</span>
               </div>
+              {/* Metal label */}
+              <div className="mt-1.5 px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase select-none"
+                style={{ background: 'linear-gradient(135deg, #facc15, #f59e0b)', color: '#451a03', boxShadow: '0 1px 8px rgba(250,204,21,0.55)' }}
+              >👑 Oro</div>
             </div>
 
-            {/* 3rd Place */}
-            <div className="flex flex-col items-center">
+            {/* ─── 3rd Place ─── */}
+            <div className="flex flex-col items-center group/step transition-all duration-300 hover:-translate-y-1">
               {thirdPlace ? (
                 <>
-                  <div className="relative flex flex-col items-center">
-                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-slate-700 border-2 border-amber-700 flex items-center justify-center font-bold text-white text-base overflow-hidden">
+                  <div className="relative flex flex-col items-center mb-3">
+                    <div className="absolute inset-0 rounded-full opacity-0 group-hover/step:opacity-100 transition-opacity duration-300"
+                      style={{ boxShadow: '0 0 18px 5px rgba(180,83,9,0.4)', borderRadius: '9999px' }} />
+                    <div
+                      className="h-12 w-12 md:h-14 md:w-14 rounded-full flex items-center justify-center font-bold text-base overflow-hidden transition-all duration-300 group-hover/step:scale-110"
+                      style={{ border: '3px solid #b45309', boxShadow: '0 0 0 3px rgba(180,83,9,0.25), 0 4px 20px rgba(0,0,0,0.5)' }}
+                    >
                       {thirdPlace.photoURL ? (
                         <img src={thirdPlace.photoURL} alt={thirdPlace.userName} className="h-full w-full object-cover" />
                       ) : (
-                        thirdPlace.userName.charAt(0).toUpperCase()
+                        <div className="h-full w-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #92400e, #78350f)' }}>
+                          <span className="text-lg font-black text-amber-200">{thirdPlace.userName.charAt(0).toUpperCase()}</span>
+                        </div>
                       )}
                     </div>
-                    <span className="absolute -top-3 bg-amber-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow border border-amber-800">
-                      3°
-                    </span>
+                    {/* Bronze badge */}
+                    <span
+                      className="absolute -bottom-2 text-[10px] font-black px-2 py-0.5 rounded-full select-none"
+                      style={{ background: 'linear-gradient(135deg, #b45309, #92400e)', color: '#fef3c7', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}
+                    >🥉 3°</span>
                   </div>
-                  <div className="text-center mt-2 max-w-[90px] truncate">
-                    <div className="font-semibold text-xs text-slate-200">{thirdPlace.userName}</div>
-                    <div className="font-mono text-yellow-400 text-xs font-bold">{thirdPlace.points} pts</div>
+                  <div className="text-center w-full px-1 mt-1">
+                    <div className="font-bold text-xs text-white truncate drop-shadow">{thirdPlace.userName}</div>
+                    <div className="font-mono text-amber-500 text-[11px] font-extrabold mt-0.5">{thirdPlace.points} pts</div>
                   </div>
                 </>
               ) : (
-                <div className="text-slate-600 text-xs">-</div>
+                <div className="text-slate-600 text-[10px] italic mb-2">Vacante</div>
               )}
-              <div className="w-full bg-slate-800 border-t border-slate-700 h-12 rounded-t-xl mt-3 flex items-center justify-center shadow">
-                <Medal className="h-5 w-5 text-amber-750 opacity-60" />
+              {/* Pedestal */}
+              <div
+                className="w-full h-12 rounded-t-xl mt-4 flex items-center justify-center relative overflow-hidden"
+                style={{ background: 'linear-gradient(180deg, #92400e 0%, #78350f 60%, #3f1d07 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 -2px 8px rgba(0,0,0,0.3)' }}
+              >
+                <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #b45309, transparent)' }} />
+                <span className="text-3xl font-black font-mono select-none" style={{ color: 'rgba(180,83,9,0.45)' }}>3</span>
               </div>
+              {/* Metal label */}
+              <div className="mt-1.5 px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase select-none"
+                style={{ background: 'linear-gradient(135deg, #b45309, #92400e)', color: '#fef3c7', boxShadow: '0 1px 6px rgba(180,83,9,0.45)' }}
+              >🥉 Bronce</div>
             </div>
+
           </div>
         </div>
       )}
