@@ -154,7 +154,6 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) {
       setMatches([]);
-      setAllForecasts([]);
       setForecasts([]);
       setUsers([]);
       setLoadingData(true);
@@ -167,11 +166,6 @@ export default function App() {
     const unsubMatches = dbService.subscribeMatches((data) => {
       setMatches(data);
       setLoadingData(false);
-    });
-
-    // All Forecasts subscription
-    const unsubAllForecasts = dbService.subscribeAllForecasts((data) => {
-      setAllForecasts(data);
     });
 
     // Personal Forecasts subscription
@@ -191,12 +185,30 @@ export default function App() {
 
     return () => {
       unsubMatches();
-      unsubAllForecasts();
       unsubForecasts();
       unsubUsers();
       unsubSettings();
     };
   }, [currentUser?.uid]);
+
+  // Load All Forecasts ONLY when viewing Leaderboard or Prode General (saves 99% of Firestore reads)
+  useEffect(() => {
+    if (!currentUser) {
+      setAllForecasts([]);
+      return;
+    }
+
+    if (activeTab === 'standings' || activeTab === 'prode-general') {
+      const unsubAllForecasts = dbService.subscribeAllForecasts((data) => {
+        setAllForecasts(data);
+      });
+      return () => {
+        unsubAllForecasts();
+      };
+    } else {
+      setAllForecasts([]);
+    }
+  }, [currentUser?.uid, activeTab]);
 
   // Handle Logins
   const handleGoogleLogin = async () => {

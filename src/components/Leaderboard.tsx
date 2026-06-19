@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trophy, Medal, SearchX, Sparkles, Star, CheckCircle2, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react';
 import { Standing, UserProfile } from '../types';
 
@@ -10,6 +10,20 @@ interface LeaderboardProps {
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser, prizes }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const currentUserRowRef = useRef<HTMLTableRowElement | null>(null);
+
+  // Automatically scroll to the logged-in user when the standings mount or load
+  useEffect(() => {
+    if (currentUserRowRef.current && !searchTerm) {
+      const timer = setTimeout(() => {
+        currentUserRowRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [standings.length, currentUser?.uid]);
 
   // Filter lists based on input query
   const filteredStandings = standings.filter(s =>
@@ -240,6 +254,7 @@ Kit de aliento:
                   return (
                     <tr
                       key={row.userId}
+                      ref={isCurrent ? currentUserRowRef : undefined}
                       className={`transition-colors ${rowBgClass}`}
                     >
                       {/* Position Cell */}

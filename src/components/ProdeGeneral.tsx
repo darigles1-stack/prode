@@ -145,8 +145,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
               
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-4 px-4 w-12 text-center sticky left-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold">Pos</th>
-                  <th className="py-4 px-4 w-52 sticky left-12 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold">Participante / Pts</th>
+                  <th className="py-4 px-1.5 sm:px-4 w-[84px] sm:w-56 min-w-[84px] sm:min-w-[224px] sticky left-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase text-center">Pos / Part</th>
                   
                   {/* Matches Column Headers */}
                   {displayMatches.map(match => (
@@ -186,45 +185,84 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                         isCurrent ? 'bg-blue-50/30' : ''
                       }`}
                     >
-                      {/* Position */}
-                      <td className="py-3.5 px-4 text-center sticky left-0 bg-white font-mono font-bold border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <div className="flex items-center justify-center space-x-1 font-mono">
-                          <span>#{userRow.position}</span>
-                          {userRow.positionTrend === 'up' && (
-                            <ArrowUp className="h-3 w-3 text-emerald-500 stroke-[3px] shrink-0" title="Subió puestos en la última fecha" />
-                          )}
-                          {userRow.positionTrend === 'down' && (
-                            <ArrowDown className="h-3 w-3 text-rose-500 stroke-[3px] shrink-0" title="Bajó puestos en la última fecha" />
-                          )}
-                          {(userRow.positionTrend === 'same' || !userRow.positionTrend) && (
-                            <Minus className="h-3 w-3 text-slate-300 stroke-[3px] shrink-0" title="Mantuvo su posición" />
-                          )}
-                        </div>
-                      </td>
+                      {/* Pos + Participant combined sticky block */}
+                      <td className="py-2 sm:py-3.5 px-1 sm:px-4 sticky left-0 bg-white border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[84px] sm:w-56 min-w-[84px] sm:min-w-[224px]">
+                        {/* Compact mobile layout */}
+                        <div className="sm:hidden flex flex-col justify-center space-y-0.5 text-center min-w-0">
+                          {/* Position & Trend */}
+                          <div className="flex items-center justify-center space-x-0.5">
+                            <span className="font-mono font-black text-slate-900 text-[10px]">
+                              #{userRow.position}
+                            </span>
+                            {userRow.positionTrend === 'up' && (
+                              <ArrowUp className="h-2.5 w-2.5 text-emerald-500 stroke-[3.5px] shrink-0" />
+                            )}
+                            {userRow.positionTrend === 'down' && (
+                              <ArrowDown className="h-2.5 w-2.5 text-rose-500 stroke-[3.5px] shrink-0" />
+                            )}
+                          </div>
+                          
+                          {/* Name (highly truncated) */}
+                          <div className="font-bold text-slate-950 text-[10px] leading-tight truncate px-0.5" title={userRow.userName}>
+                            {userRow.userName}
+                          </div>
 
-                      {/* Participant block */}
-                      <td className="py-3.5 px-4 sticky left-12 bg-white border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <div className="flex items-center space-x-2.5 max-w-[195px]">
+                          {/* Points & tag */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-extrabold text-blue-700 font-mono leading-none">
+                              {userRow.points}p
+                            </span>
+                            {isCurrent && (
+                              <span className="bg-yellow-100 text-yellow-800 text-[8px] font-black px-1 rounded-full mt-0.5 scale-90">
+                                Tú
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Rich desktop layout */}
+                        <div className="hidden sm:flex items-center space-x-2.5 max-w-[210px] min-w-0">
+                          {/* Position Badge & Trend */}
+                          <div className="flex flex-col items-center justify-center shrink-0 min-w-[32px]">
+                            <span className="font-mono font-bold text-slate-900 text-xs">
+                              #{userRow.position}
+                            </span>
+                            <div className="flex items-center justify-center mt-0.5">
+                              {userRow.positionTrend === 'up' && (
+                                <ArrowUp className="h-2.5 w-2.5 text-emerald-500 stroke-[3.5px] shrink-0" title="Subió puestos en la última fecha" />
+                              )}
+                              {userRow.positionTrend === 'down' && (
+                                <ArrowDown className="h-2.5 w-2.5 text-rose-500 stroke-[3.5px] shrink-0" title="Bajó puestos en la última fecha" />
+                              )}
+                              {(userRow.positionTrend === 'same' || !userRow.positionTrend) && (
+                                <Minus className="h-2.5 w-2.5 text-slate-300 stroke-[3.5px] shrink-0" title="Mantuvo su posición" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Avatar picture/initial */}
                           <div className="shrink-0">
                             {userRow.photoURL ? (
-                              <img src={userRow.photoURL} alt={userRow.userName} className="h-6 w-6 rounded-full border border-slate-200" />
+                              <img src={userRow.photoURL} alt={userRow.userName} className="h-7 w-7 rounded-full border border-slate-200" />
                             ) : (
-                              <div className="h-6 w-6 rounded-full bg-slate-100 border text-slate-700 flex items-center justify-center font-bold text-[10px] uppercase">
+                              <div className="h-7 w-7 rounded-full bg-slate-100 border text-slate-700 flex items-center justify-center font-bold text-[10px] uppercase">
                                 {userRow.userName.charAt(0)}
                               </div>
                             )}
                           </div>
-                          <div className="truncate">
-                            <div className="font-bold text-slate-900 truncate flex items-center gap-1 text-[11px]">
-                              {userRow.userName}
+
+                          {/* Details (Name and points) */}
+                          <div className="truncate min-w-0 flex-1">
+                            <div className="font-bold text-slate-900 truncate flex items-center gap-0.5 text-[11px]">
+                              <span className="truncate" title={userRow.userName}>{userRow.userName}</span>
                               {isCurrent && (
                                 <span className="bg-yellow-100 text-yellow-800 text-[8px] font-extrabold px-1.5 rounded-full shrink-0">
                                   Tú
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-500 font-medium font-mono">
-                              {userRow.points} pts • ({userRow.exactHitsCount} Plenos)
+                            <div className="text-[10px] text-slate-500 font-medium font-mono truncate">
+                              {userRow.points} pts • ({userRow.exactHitsCount ?? 0} Plenos)
                             </div>
                           </div>
                         </div>

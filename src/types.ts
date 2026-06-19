@@ -4,6 +4,9 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   points: number;
+  exactHitsCount?: number;
+  outcomeHitsCount?: number;
+  forecastsCount?: number;
   isAdmin?: boolean;
   isBanned?: boolean;
   legajo?: string;

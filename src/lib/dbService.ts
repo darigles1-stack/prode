@@ -675,6 +675,43 @@ export const dbService = {
     }
   },
 
+  async getAllForecasts(): Promise<UserForecast[]> {
+    if (shouldUseFirebase()) {
+      try {
+        const snapshot = await getDocs(collection(db, 'forecasts'));
+        const forecasts: UserForecast[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toDate().toISOString() 
+            : (data.createdAt || new Date().toISOString());
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toDate().toISOString() 
+            : data.updatedAt;
+
+          forecasts.push({
+            id: doc.id,
+            userId: data.userId,
+            userName: data.userName,
+            userEmail: data.userEmail,
+            matchId: data.matchId,
+            homeScore: data.homeScore,
+            awayScore: data.awayScore,
+            pointsEarned: data.pointsEarned ?? null,
+            createdAt,
+            updatedAt
+          });
+        });
+        return forecasts;
+      } catch (error) {
+        handleFirestoreError(error, OperationType.LIST, 'forecasts');
+        throw error;
+      }
+    } else {
+      return getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
+    }
+  },
+
   async saveForecast(
     userId: string, 
     userName: string, 
@@ -1128,7 +1165,7 @@ export const dbService = {
           });
         }
 
-        // 3. For each user, sum points and update their profile only if points actually changed!
+        // 3. For each user, sum points and update their profile only if points or counts actually changed!
         const usersRef = collection(db, 'users');
         const usersSnap = await getDocs(usersRef);
         
@@ -1137,17 +1174,40 @@ export const dbService = {
           const forecasts = userForecasts[userId] || [];
           
           let totalPoints = 0;
+          let exactHitsCount = 0;
+          let outcomeHitsCount = 0;
+          let forecastsCount = 0;
+
           forecasts.forEach(f => {
             if (f.pointsEarned !== null && f.pointsEarned !== undefined) {
               totalPoints += f.pointsEarned;
+              forecastsCount += 1;
+              if (f.pointsEarned === 3) {
+                exactHitsCount += 1;
+              } else if (f.pointsEarned === 1) {
+                outcomeHitsCount += 1;
+              }
             }
           });
 
-          // Only perform document update write if totalPoints differs from current data points
-          const currentPoints = uDoc.data().points ?? 0;
-          if (totalPoints !== currentPoints) {
+          // Only perform document update write if points or counts differ from current data
+          const data = uDoc.data();
+          const currentPoints = data.points ?? 0;
+          const currentExactHits = data.exactHitsCount ?? 0;
+          const currentOutcomeHits = data.outcomeHitsCount ?? 0;
+          const currentForecastsCount = data.forecastsCount ?? 0;
+
+          if (
+            totalPoints !== currentPoints ||
+            exactHitsCount !== currentExactHits ||
+            outcomeHitsCount !== currentOutcomeHits ||
+            forecastsCount !== currentForecastsCount
+          ) {
             batch.update(doc(db, 'users', userId), {
               points: totalPoints,
+              exactHitsCount,
+              outcomeHitsCount,
+              forecastsCount,
               updatedAt: Timestamp.now()
             });
             writeCount++;
@@ -2151,6 +2211,7 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[], match
 
   // Filter out banned users from participating in rankings/standings blocks
   const activeUsers = users.filter(u => !u.isBanned);
+  const hasForecastsToProcess = forecasts && forecasts.length > 0;
 
   activeUsers.forEach(u => {
     standingsMap[u.uid] = {
@@ -2161,25 +2222,27 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[], match
       userEmail: u.email,
       photoURL: u.photoURL,
       points: u.points || 0,
-      forecastsCount: 0,
-      exactHitsCount: 0,
-      outcomeHitsCount: 0,
+      forecastsCount: hasForecastsToProcess ? 0 : (u.forecastsCount || 0),
+      exactHitsCount: hasForecastsToProcess ? 0 : (u.exactHitsCount || 0),
+      outcomeHitsCount: hasForecastsToProcess ? 0 : (u.outcomeHitsCount || 0),
       legajo: u.legajo,
       gerencia: u.gerencia
     };
   });
 
-  forecasts.forEach(f => {
-    const row = standingsMap[f.userId];
-    if (row) {
-      row.forecastsCount += 1;
-      if (f.pointsEarned === 3) {
-        row.exactHitsCount += 1;
-      } else if (f.pointsEarned === 1) {
-        row.outcomeHitsCount += 1;
+  if (hasForecastsToProcess) {
+    forecasts.forEach(f => {
+      const row = standingsMap[f.userId];
+      if (row) {
+        row.forecastsCount += 1;
+        if (f.pointsEarned === 3) {
+          row.exactHitsCount += 1;
+        } else if (f.pointsEarned === 1) {
+          row.outcomeHitsCount += 1;
+        }
       }
-    }
-  });
+    });
+  }
 
   // Convert to array, sort by points DESC, then exactHits DESC, then outcomeHits DESC
   const list = Object.values(standingsMap).sort((a, b) => {
