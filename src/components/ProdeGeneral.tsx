@@ -145,7 +145,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
               
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-4 px-1.5 sm:px-4 w-[84px] sm:w-56 min-w-[84px] sm:min-w-[224px] sticky left-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase text-center">Pos / Part</th>
+                  <th className="py-4 px-0.5 sm:px-4 w-[60px] sm:w-56 min-w-[60px] sm:min-w-[224px] sticky left-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase text-center">Pos/Part</th>
                   
                   {/* Matches Column Headers */}
                   {displayMatches.map(match => (
@@ -186,7 +186,7 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
                       }`}
                     >
                       {/* Pos + Participant combined sticky block */}
-                      <td className="py-2 sm:py-3.5 px-1 sm:px-4 sticky left-0 bg-white border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[84px] sm:w-56 min-w-[84px] sm:min-w-[224px]">
+                      <td className="py-2 sm:py-3.5 px-0.5 sm:px-4 sticky left-0 bg-white border-r border-slate-100 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[60px] sm:w-56 min-w-[60px] sm:min-w-[224px]">
                         {/* Compact mobile layout */}
                         <div className="sm:hidden flex flex-col justify-center space-y-0.5 text-center min-w-0">
                           {/* Position & Trend */}

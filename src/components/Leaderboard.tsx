@@ -370,14 +370,25 @@ Kit de aliento:
                             <div className="text-left flex flex-col sm:flex-row sm:items-center sm:gap-2">
                               <span className={`text-slate-400 font-mono text-xs ${isFirst ? 'font-medium' : ''}`}>{row.userEmail}</span>
                               {/* Mobile/Compact badges fallback */}
-                              <div className="flex flex-wrap gap-1 mt-1 sm:mt-0 md:hidden">
+                              <div className="flex flex-wrap gap-1 mt-1 sm:mt-0">
+                                {/* Mobile Plenos & Aciertos */}
+                                <span className="inline-flex items-center sm:hidden text-[10px] font-bold text-yellow-800 bg-yellow-50 border border-yellow-200 px-1.5 py-0.5 rounded font-mono">
+                                  <Sparkles className="h-2.5 w-2.5 mr-0.5 text-amber-500 fill-amber-300" />
+                                  {row.exactHitsCount} Plenos
+                                </span>
+                                <span className="inline-flex items-center sm:hidden text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded font-mono">
+                                  <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 text-blue-550" />
+                                  {row.outcomeHitsCount} Aciertos
+                                </span>
+
+                                {/* Mobile Legajo & Gerencia */}
                                 {row.legajo && (
-                                  <span className="bg-slate-100 text-slate-600 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-slate-200/50">
+                                  <span className="bg-slate-100 text-slate-600 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-slate-200/50 md:hidden">
                                     Legajo: #{row.legajo}
                                   </span>
                                 )}
                                 {row.gerencia && (
-                                  <span className="bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100">
+                                  <span className="bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-100 md:hidden">
                                     {row.gerencia}
                                   </span>
                                 )}
