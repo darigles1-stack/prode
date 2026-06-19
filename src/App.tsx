@@ -337,6 +337,8 @@ export default function App() {
   const userTrend = userStanding ? userStanding.positionTrend : 'same';
   const totalCompetitors = standings.length;
   const userPoints = userStanding ? userStanding.points : (currentUser?.points || 0);
+  const leaderPoints = standings[0]?.points ?? 0;
+  const pointsToLeader = Math.max(0, leaderPoints - userPoints);
   const exactHits = userStanding ? (userStanding.exactHitsCount || 0) : 0;
   const outcomeHits = userStanding ? (userStanding.outcomeHitsCount || 0) : 0;
   const totalForecasts = userStanding ? (userStanding.forecastsCount || 0) : 0;
@@ -717,6 +719,11 @@ export default function App() {
                         <div>
                           <div className="text-[8px] text-slate-350 font-extrabold uppercase tracking-wide">Puntos</div>
                           <div className="text-base font-black text-yellow-300 font-mono leading-tight">{userPoints}</div>
+                          {standings.length > 0 && (
+                            <div className="text-[8.5px] text-yellow-100/80 font-bold font-sans mt-0.5 whitespace-nowrap">
+                              {pointsToLeader === 0 ? "¡Sos el puntero! 👑" : `A ${pointsToLeader} pts del puntero`}
+                            </div>
+                          )}
                         </div>
                         <Target className="h-3.5 w-3.5 text-yellow-400/70 shrink-0" />
                       </div>

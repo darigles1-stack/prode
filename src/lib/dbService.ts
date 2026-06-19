@@ -2283,12 +2283,14 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[], match
       const lastMatchId = lastFinished.id;
 
       // Create a map to compute what the previous scores would be
+      // IMPORTANT: Use original user data, not recalculated standingsMap values
+      // because standingsMap may have recalculated exactHits/forecasts from scratch
       const prevStandingsMap: { [userId: string]: { points: number; exactHits: number; forecastsCount: number } } = {};
       activeUsers.forEach(u => {
         prevStandingsMap[u.uid] = {
           points: u.points || 0,
-          exactHits: standingsMap[u.uid]?.exactHitsCount || 0,
-          forecastsCount: standingsMap[u.uid]?.forecastsCount || 0
+          exactHits: u.exactHitsCount || 0,  // Use original DB value, not recalculated
+          forecastsCount: u.forecastsCount || 0  // Use original DB value, not recalculated
         };
       });
 
@@ -2306,7 +2308,7 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[], match
         }
       });
 
-      // Sort and rank the previous list
+      // Sort and rank the previous list using the same criteria as current ranking
       const prevListRanked = Object.keys(prevStandingsMap).map(uid => ({
         userId: uid,
         points: prevStandingsMap[uid].points,
@@ -2326,7 +2328,7 @@ function computeStandings(users: UserProfile[], forecasts: UserForecast[], match
       // Apply the trends to the current rankedList!
       rankedList.forEach(item => {
         const prevRank = previousRanksMap[item.userId];
-        if (prevRank) {
+        if (prevRank !== undefined) {
           item.previousPosition = prevRank;
           if (prevRank > item.position) {
             item.positionTrend = 'up';

@@ -139,17 +139,17 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
       {/* Matrix Table block with visual horizontal overflow */}
       {displayMatches.length > 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[600px] md:max-h-[65vh]">
             {/* Set a min-width to avoid compression */}
             <table className="w-full text-left border-collapse min-w-[700px]">
               
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-4 px-0.5 sm:px-4 w-[60px] sm:w-56 min-w-[60px] sm:min-w-[224px] sticky left-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase text-center">Pos/Part</th>
+                <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 sticky top-0 z-20">
+                  <th className="py-4 px-0.5 sm:px-4 w-[60px] sm:w-56 min-w-[60px] sm:min-w-[224px] sticky left-0 top-0 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-30 font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase text-center">Pos/Part</th>
                   
                   {/* Matches Column Headers */}
                   {displayMatches.map(match => (
-                    <th key={match.id} className="py-3 px-3 text-center border-l border-slate-150 min-w-[110px] bg-slate-50/50">
+                    <th key={match.id} className="py-3 px-3 text-center border-l border-slate-150 min-w-[110px] bg-slate-50 sticky top-0 z-20">
                       <div className="flex flex-col items-center">
                         <span className="text-[10px] text-blue-900 font-extrabold truncate max-w-[130px]">
                           {getMatchTitle(match)}
