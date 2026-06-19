@@ -6,15 +6,16 @@ interface LeaderboardProps {
   standings: Standing[];
   currentUser: UserProfile | null;
   prizes?: { first: string; second: string; third: string };
+  isLoading?: boolean;
 }
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser, prizes }) => {
+export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser, prizes, isLoading = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const currentUserRowRef = useRef<HTMLTableRowElement | null>(null);
 
-  // Automatically scroll to the logged-in user when the standings mount or load
+  // Automatically scroll to the logged-in user when the standings mount or load and calculation completes
   useEffect(() => {
-    if (currentUserRowRef.current && !searchTerm) {
+    if (!isLoading && currentUserRowRef.current && !searchTerm) {
       const timer = setTimeout(() => {
         currentUserRowRef.current?.scrollIntoView({
           behavior: 'smooth',
@@ -23,7 +24,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [standings.length, currentUser?.uid]);
+  }, [isLoading, standings.length, currentUser?.uid, searchTerm]);
 
   // Filter lists based on input query
   const filteredStandings = standings.filter(s =>
@@ -214,8 +215,24 @@ Kit de aliento:
           </div>
         </div>
 
-        {/* Standings Table */}
-        {filteredStandings.length > 0 ? (
+         {/* Standings Table */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center p-16 text-center min-h-[350px] space-y-4">
+            {/* Elegant spinning orbit */}
+            <div className="relative flex items-center justify-center w-16 h-16 select-none">
+              <div className="absolute w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shadow-inner">
+                <Trophy className="h-5 w-5 text-blue-600 animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-800 text-sm">Calculando Posiciones...</h4>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                Procesando pronósticos y actualizando el ranking en tiempo real.
+              </p>
+            </div>
+          </div>
+        ) : filteredStandings.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

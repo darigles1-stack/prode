@@ -47,6 +47,7 @@ export default function App() {
   const [matches, setMatches] = useState<SoccerMatch[]>([]);
   const [forecasts, setForecasts] = useState<UserForecast[]>([]);
   const [allForecasts, setAllForecasts] = useState<UserForecast[]>([]);
+  const [loadingForecasts, setLoadingForecasts] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [enabledPhases, setEnabledPhases] = useState<string[]>(['grupos']);
 
@@ -199,14 +200,17 @@ export default function App() {
     }
 
     if (activeTab === 'standings' || activeTab === 'prode-general') {
+      setLoadingForecasts(true);
       const unsubAllForecasts = dbService.subscribeAllForecasts((data) => {
         setAllForecasts(data);
+        setLoadingForecasts(false);
       });
       return () => {
         unsubAllForecasts();
       };
     } else {
       setAllForecasts([]);
+      setLoadingForecasts(false);
     }
   }, [currentUser?.uid, activeTab]);
 
@@ -917,6 +921,7 @@ export default function App() {
                     standings={standings} 
                     currentUser={currentUser}
                     prizes={prizes}
+                    isLoading={loadingForecasts}
                   />
                 )}
 

@@ -407,19 +407,32 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   <div className="flex justify-between items-center mb-3">
                     {/* Lock Status Header Indicator */}
                     {match.status === 'finished' ? (
-                      <span className="inline-flex items-center text-[10px] uppercase font-bold text-slate-500 bg-slate-100 border px-2 py-0.5 rounded-full font-mono">
-                        Partido Finalizado
-                      </span>
+                      isUserAdmin ? (
+                        <span className="inline-flex items-center text-[10px] uppercase font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-mono">
+                          Partido Finalizado (Editable Admin) 🛠️
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] uppercase font-bold text-slate-500 bg-slate-100 border px-2 py-0.5 rounded-full font-mono">
+                          Partido Finalizado
+                        </span>
+                      )
                     ) : !isPhaseUnlocked ? (
                       <span className="inline-flex items-center text-[10px] uppercase font-bold text-amber-600 bg-amber-55 border border-amber-200 px-2 py-0.5 rounded-full font-mono">
                         <Lock className="h-2.5 w-2.5 mr-1" />
                         Fase Inactiva 🔒
                       </span>
                     ) : isLocked ? (
-                      <span className="inline-flex items-center text-[10px] uppercase font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full font-mono">
-                        <Lock className="h-2.5 w-2.5 mr-1" />
-                        Bloqueado (Cerrado)
-                      </span>
+                      isUserAdmin ? (
+                        <span className="inline-flex items-center text-[10px] uppercase font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-mono">
+                          <Unlock className="h-2.5 w-2.5 mr-1" />
+                          Bloqueado (Admin Bypass) 🛠️
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] uppercase font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full font-mono">
+                          <Lock className="h-2.5 w-2.5 mr-1" />
+                          Bloqueado (Cerrado)
+                        </span>
+                      )
                     ) : (
                       <span className="inline-flex items-center text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-mono">
                         <Unlock className="h-2.5 w-2.5 mr-1" />
@@ -514,7 +527,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={homeVal}
                           onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                          disabled={!isPhaseUnlocked || isLocked || match.status === 'finished' || savingId === match.id}
+                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
@@ -529,19 +542,19 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={awayVal}
                           onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                          disabled={!isPhaseUnlocked || isLocked || match.status === 'finished' || savingId === match.id}
+                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
                       </div>
 
                       {/* Submit / Update Button for open matches */}
-                      {match.status === 'pending' && (
+                      {(match.status === 'pending' || isUserAdmin) && (
                         <button
                           onClick={() => handleSubmit(match.id)}
-                          disabled={!isPhaseUnlocked || isLocked || savingId === match.id || !isFormDirty}
+                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id || !isFormDirty}
                           className={`px-3 py-2 text-xs font-bold rounded-lg flex items-center space-x-1 transition-all shadow-sm cursor-pointer ${
-                            isLocked 
+                            (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin)
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed border'
                               : savingId === match.id
                                 ? 'bg-amber-100 text-amber-700 border border-amber-250 cursor-not-allowed'

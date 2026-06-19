@@ -732,8 +732,13 @@ export const dbService = {
       updatedAt: isFirebase ? Timestamp.now() : new Date().toISOString()
     };
 
+    let isMatchFinished = false;
+
     if (isFirebase) {
       try {
+        const matchSnap = await getDoc(doc(db, 'matches', matchId));
+        isMatchFinished = matchSnap.exists() && matchSnap.data()?.status === 'finished';
+
         const forecastRef = doc(db, 'forecasts', forecastId);
         const forecastSnap = await getDoc(forecastRef);
         
@@ -756,6 +761,10 @@ export const dbService = {
         throw err;
       }
     } else {
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      const match = matches.find(m => m.id === matchId);
+      isMatchFinished = match?.status === 'finished';
+
       const forecasts = getLocalData<UserForecast>('forecasts', SEED_FORECASTS);
       const idx = forecasts.findIndex(f => f.userId === userId && f.matchId === matchId);
       
@@ -778,6 +787,10 @@ export const dbService = {
       }
       setLocalData('forecasts', forecasts);
       window.dispatchEvent(new Event('prode_db_updated'));
+    }
+
+    if (isMatchFinished) {
+      await this.syncUserForecastsAndPoints();
     }
   },
 
