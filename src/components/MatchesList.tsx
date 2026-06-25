@@ -25,6 +25,8 @@ const isPlaceholderTeam = (teamName: string): boolean => {
   return false;
 };
 
+const GENERIC_FLAG_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32'><circle cx='16' cy='16' r='15' fill='%23f1f5f9' stroke='%23cbd5e1' stroke-width='2'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='15' fill='%2394a3b8' font-weight='black'>?</text></svg>";
+
 interface MatchesListProps {
   matches: SoccerMatch[];
   forecasts: UserForecast[];
@@ -355,7 +357,55 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
       {/* Match cards grid */}
       {filteredMatches.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-5">
+          {/* Admin Recalculate Banner */}
+          {isUserAdmin && selectedPhase !== 'grupos' && onGenerateKnockout && (
+            <div className="bg-gradient-to-br from-blue-900 to-indigo-950 border border-blue-800 rounded-2xl p-5 shadow-sm text-left">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-mono font-black text-blue-300 tracking-wider bg-blue-900/50 px-2.5 py-0.5 rounded border border-blue-700">
+                    Módulo Administrador BanCo 🛠️
+                  </span>
+                  <h4 className="text-sm font-bold text-white">
+                    Actualización de Clasificados desde Fase Anterior
+                  </h4>
+                  <p className="text-[11px] text-blue-200 leading-relaxed max-w-2xl">
+                    Si se jugaron o completaron partidos de la fase anterior que definen los rivales de esta etapa, podés presionar el botón de la derecha para volver a calcular y cargar automáticamente los países reales.
+                    <br />
+                    <span className="font-extrabold text-yellow-300">⚠️ ¡Tus pronósticos ya existentes se mantendrán 100% a salvo de forma exitosa!</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleGenerateKnockoutPhase('dynamic')}
+                  disabled={generatingKnockout}
+                  className="w-full md:w-auto whitespace-nowrap bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-extrabold py-3 px-5 rounded-xl text-xs flex items-center justify-center space-x-2 transition-all shadow-md cursor-pointer disabled:bg-slate-300"
+                >
+                  {generatingKnockout ? (
+                    <>
+                      <RefreshCcw className="h-4 w-4 animate-spin" />
+                      <span>Actualizando llaves...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Calcular y Actualizar Clasificados Reales ⚽</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {knockoutResult && (
+                <div className={`mt-3.5 p-3 rounded-xl text-xs font-bold leading-relaxed border ${
+                  knockoutResult.success 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-250' 
+                    : 'bg-rose-50 text-rose-800 border-rose-250'
+                }`}>
+                  {knockoutResult.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredMatches.map(match => {
             const forecast = getForecast(match.id);
             const { isLocked, timeLeftString, lockDeadline } = getLockInfo(match.matchDate);
@@ -365,6 +415,33 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             const isNewPhase = matchPhase !== 'grupos';
             const bothTeamsReady = !isNewPhase || (!isPlaceholderTeam(match.homeTeam) && !isPlaceholderTeam(match.awayTeam));
             const isPhaseUnlocked = isUserAdmin || matchPhase === 'grupos' || enabledPhases.includes(matchPhase);
+
+            const isHomePlaceholder = isPlaceholderTeam(match.homeTeam);
+            const isAwayPlaceholder = isPlaceholderTeam(match.awayTeam);
+
+            const homeTeamInfo = isHomePlaceholder ? {
+              name: "Contrincante a definirse",
+              code: "generic",
+              flagUrl: GENERIC_FLAG_SVG,
+              tooltip: getTeamNameAndFlag(match.homeTeam).name
+            } : {
+              name: getTeamNameAndFlag(match.homeTeam).name,
+              code: getTeamNameAndFlag(match.homeTeam).code,
+              flagUrl: `/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`,
+              tooltip: getTeamNameAndFlag(match.homeTeam).name
+            };
+
+            const awayTeamInfo = isAwayPlaceholder ? {
+              name: "Contrincante a definirse",
+              code: "generic",
+              flagUrl: GENERIC_FLAG_SVG,
+              tooltip: getTeamNameAndFlag(match.awayTeam).name
+            } : {
+              name: getTeamNameAndFlag(match.awayTeam).name,
+              code: getTeamNameAndFlag(match.awayTeam).code,
+              flagUrl: `/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`,
+              tooltip: getTeamNameAndFlag(match.awayTeam).name
+            };
 
             // Local input memory or default to loaded forecast
             const homeVal = inputStates[match.id]?.home !== undefined 
@@ -481,14 +558,21 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   <div className="bg-slate-55 border border-slate-150 bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between shadow-inner">
                     {/* Home Team */}
                     <div className="flex-1 flex flex-col items-center justify-center sm:flex-row sm:justify-end font-semibold text-sm text-slate-800 pr-1 sm:pr-2">
-                      <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-right">
+                      <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-right">
                         <img 
-                          src={`/flags/${getTeamNameAndFlag(match.homeTeam).code}.svg`} 
-                          alt={getTeamNameAndFlag(match.homeTeam).name} 
-                          title={getTeamNameAndFlag(match.homeTeam).name}
+                          src={homeTeamInfo.flagUrl} 
+                          alt={homeTeamInfo.tooltip} 
+                          title={homeTeamInfo.tooltip}
                           className="w-5 h-5 rounded-full shadow-sm select-none shrink-0" 
                         />
-                        <span className="block truncate max-w-[80px] xs:max-w-[110px] sm:max-w-none">{getTeamNameAndFlag(match.homeTeam).name}</span>
+                        <div className="flex flex-col items-center sm:items-end">
+                          <span className={`block truncate max-w-[90px] xs:max-w-[125px] sm:max-w-[150px] leading-tight ${isHomePlaceholder ? 'text-slate-400 font-bold italic' : 'text-slate-800 font-black'}`}>
+                            {homeTeamInfo.name}
+                          </span>
+                          {isHomePlaceholder && (
+                            <span className="text-[9px] text-slate-400 font-bold block mt-0.5 font-sans">({homeTeamInfo.tooltip})</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -513,12 +597,19 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
                     {/* Away Team */}
                     <div className="flex-1 flex flex-col items-center justify-center sm:flex-row sm:justify-start font-semibold text-sm text-slate-800 pl-1 sm:pl-2">
-                      <div className="flex flex-col-reverse items-center sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-left">
-                        <span className="block truncate max-w-[80px] xs:max-w-[110px] sm:max-w-none">{getTeamNameAndFlag(match.awayTeam).name}</span>
+                      <div className="flex flex-col-reverse items-center sm:flex-row sm:items-center gap-1.5 text-slate-800 font-extrabold text-xs tracking-tight transition-transform cursor-default text-center sm:text-left">
+                        <div className="flex flex-col items-center sm:items-start">
+                          <span className={`block truncate max-w-[90px] xs:max-w-[125px] sm:max-w-[150px] leading-tight ${isAwayPlaceholder ? 'text-slate-400 font-bold italic' : 'text-slate-800 font-black'}`}>
+                            {awayTeamInfo.name}
+                          </span>
+                          {isAwayPlaceholder && (
+                            <span className="text-[9px] text-slate-400 font-bold block mt-0.5 font-sans">({awayTeamInfo.tooltip})</span>
+                          )}
+                        </div>
                         <img 
-                          src={`/flags/${getTeamNameAndFlag(match.awayTeam).code}.svg`} 
-                          alt={getTeamNameAndFlag(match.awayTeam).name} 
-                          title={getTeamNameAndFlag(match.awayTeam).name}
+                          src={awayTeamInfo.flagUrl} 
+                          alt={awayTeamInfo.tooltip} 
+                          title={awayTeamInfo.tooltip}
                           className="w-5 h-5 rounded-full shadow-sm select-none shrink-0" 
                         />
                       </div>
@@ -627,6 +718,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
               </div>
             );
           })}
+          </div>
         </div>
       ) : matches.length === 0 ? (
         <div className="p-8 md:p-12 text-center bg-white border border-slate-200 rounded-2xl max-w-2xl mx-auto shadow-sm">
