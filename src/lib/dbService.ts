@@ -1746,6 +1746,27 @@ export const dbService = {
           const offsets = offsetMap[i] || { day: Math.floor(i / 4), hour: 12 + (i % 4) * 3 };
           dayOffset = offsets.day;
           hourOffset = offsets.hour;
+        } else if (targetPhase === '8vos') {
+          // Saturday, July 4 (Day 0) to Tuesday, July 7 (Day 3). 2 matches per day.
+          dayOffset = Math.floor(i / 2);
+          hourOffset = i % 2 === 0 ? 15 : 19; // Spaced 15:00 and 19:00 Argentina time
+        } else if (targetPhase === 'cuartos') {
+          // Thursday, July 9 (Day 0) to Sunday, July 12 (Day 3). 1 match per day.
+          // Note: July 8 is a rest day, so baseStartMillis (which is July 7 + 1 = July 8) needs +1 day.
+          dayOffset = i + 1; // July 9 is Day 1 from July 8 base
+          hourOffset = 18; // 18:00 Argentina time
+        } else if (targetPhase === 'semis') {
+          // Tuesday, July 14 (Day 0) to Wednesday, July 15 (Day 1). 1 match per day.
+          // Note: July 13 is a rest day. Last match of cuartos is July 12.
+          // baseStartMillis (July 12 + 1 = July 13).
+          dayOffset = i + 1; // July 14 is Day 1 from July 13 base
+          hourOffset = 21; // 21:00 Argentina time
+        } else if (targetPhase === 'final') {
+          // Sunday, July 19.
+          // Note: Semis end on July 15. baseStartMillis is July 15 + 1 = July 16.
+          // July 19 is Day 3 from July 16 base.
+          dayOffset = 3;
+          hourOffset = 16; // 16:00 Argentina time
         } else {
           dayOffset = Math.floor(i / 4);
           hourOffset = 12 + (i % 4) * 3;
