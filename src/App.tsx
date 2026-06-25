@@ -946,6 +946,8 @@ export default function App() {
                     currentUser={currentUser}
                     prizes={prizes}
                     isLoading={loadingForecasts}
+                    matches={matches}
+                    allForecasts={allForecasts}
                   />
                 )}
 

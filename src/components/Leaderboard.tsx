@@ -1,17 +1,106 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trophy, Medal, SearchX, Sparkles, Star, CheckCircle2, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react';
-import { Standing, UserProfile } from '../types';
+import { Standing, UserProfile, SoccerMatch, UserForecast } from '../types';
 
 interface LeaderboardProps {
   standings: Standing[];
   currentUser: UserProfile | null;
   prizes?: { first: string; second: string; third: string };
   isLoading?: boolean;
+  matches?: SoccerMatch[];
+  allForecasts?: UserForecast[];
 }
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser, prizes, isLoading = false }) => {
+export const Leaderboard: React.FC<LeaderboardProps> = ({ 
+  standings, 
+  currentUser, 
+  prizes, 
+  isLoading = false,
+  matches = [],
+  allForecasts = []
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [subTab, setSubTab] = useState<'ranking' | 'dates'>('ranking');
   const currentUserRowRef = useRef<HTMLTableRowElement | null>(null);
+
+  // Group matches and calculate standings per date
+  const processedDates = React.useMemo(() => {
+    if (!matches || !allForecasts) return [];
+
+    const matchesByDate: Record<string, SoccerMatch[]> = {};
+    matches.forEach(m => {
+      if (m.status === 'finished') {
+        const dateStr = m.matchDate.substring(0, 10);
+        if (!matchesByDate[dateStr]) {
+          matchesByDate[dateStr] = [];
+        }
+        matchesByDate[dateStr].push(m);
+      }
+    });
+
+    return Object.entries(matchesByDate)
+      .map(([dateStr, dayMatches]) => {
+        const dayMatchIds = dayMatches.map(m => m.id);
+        const dayForecasts = allForecasts.filter(f => dayMatchIds.includes(f.matchId));
+
+        // Group points by user
+        const userStats: Record<string, { userId: string; userName: string; userEmail: string; points: number; exactCount: number }> = {};
+        
+        dayForecasts.forEach(f => {
+          const pts = f.pointsEarned ?? 0;
+          const isExact = pts === 3;
+          if (!userStats[f.userId]) {
+            userStats[f.userId] = {
+              userId: f.userId,
+              userName: f.userName,
+              userEmail: f.userEmail,
+              points: 0,
+              exactCount: 0
+            };
+          }
+          userStats[f.userId].points += pts;
+          if (isExact) {
+            userStats[f.userId].exactCount += 1;
+          }
+        });
+
+        const sortedUsers = Object.values(userStats).sort((a, b) => {
+          if (b.points !== a.points) return b.points - a.points;
+          if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
+          return a.userName.localeCompare(b.userName);
+        });
+
+        return {
+          dateStr,
+          matches: dayMatches,
+          leaderboard: sortedUsers
+        };
+      })
+      .filter(item => item.leaderboard.length > 0) // Only include dates with forecasts
+      .sort((a, b) => b.dateStr.localeCompare(a.dateStr)); // Newest first
+  }, [matches, allForecasts]);
+
+  const getWinnersOfDate = (leaderboard: any[]) => {
+    if (leaderboard.length === 0) return [];
+    const maxPoints = leaderboard[0].points;
+    const maxExact = leaderboard[0].exactCount;
+    return leaderboard.filter(u => u.points === maxPoints && u.exactCount === maxExact);
+  };
+
+  const formatLocalDate = (isoDateStr: string) => {
+    try {
+      const [year, month, day] = isoDateStr.split('-');
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return date.toLocaleDateString('es-AR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return isoDateStr;
+    }
+  };
 
   // Automatically scroll to the logged-in user when the standings mount or load and calculation completes
   useEffect(() => {
@@ -41,12 +130,145 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ standings, currentUser
   return (
     <div id="leaderboard-panel" className="space-y-6">
 
-      {/* Visual Podium Highlights */}
-      {standings.length > 0 && (
-        <div
-          className="rounded-3xl p-6 shadow-xl overflow-hidden relative"
-          style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}
+      {/* Navigation sub-tabs */}
+      <div className="flex border border-slate-200 bg-slate-50 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setSubTab('ranking')}
+          className={`text-xs font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${
+            subTab === 'ranking' ? 'bg-blue-605 bg-blue-650 bg-blue-700 text-white shadow' : 'text-slate-600 hover:text-slate-800'
+          }`}
         >
+          🏆 Ranking General
+        </button>
+        <button
+          onClick={() => setSubTab('dates')}
+          className={`text-xs font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${
+            subTab === 'dates' ? 'bg-blue-700 text-white shadow' : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          🏅 Destacados por Fecha
+        </button>
+      </div>
+
+      {subTab === 'dates' ? (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm text-left">
+            <h2 className="text-base font-bold text-slate-900">Destacados por Fecha de Juego</h2>
+            <p className="text-xs text-slate-500">Descubrí quién fue el participante con mejor desempeño y mayor cantidad de aciertos en cada jornada.</p>
+          </div>
+
+          {processedDates.length === 0 ? (
+            <div className="p-16 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <SearchX className="h-10 w-10 text-slate-350 mx-auto mb-3" />
+              <h4 className="font-semibold text-slate-700 text-sm">Aún no hay fechas con partidos finalizados</h4>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                Una vez que finalicen los partidos de la fecha y el administrador cargue los resultados reales, aquí verás quién obtuvo la mayor puntuación de cada día de competencia.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {processedDates.map((item) => {
+                const winners = getWinnersOfDate(item.leaderboard);
+                const runnersUp = item.leaderboard
+                  .filter(u => !winners.some(w => w.userId === u.userId))
+                  .slice(0, 3); // Top 3 runners-up with points > 0
+
+                return (
+                  <div key={item.dateStr} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col md:flex-row">
+                    {/* Left Panel: Matches of the Day */}
+                    <div className="p-5 bg-slate-50/50 md:w-1/3 border-b md:border-b-0 md:border-r border-slate-150/60 text-left">
+                      <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
+                        📅 {formatLocalDate(item.dateStr)}
+                      </h4>
+                      <span className="text-[10px] bg-blue-105 text-blue-900 font-extrabold px-2.5 py-0.5 rounded-full select-none">
+                        {item.matches.length} {item.matches.length === 1 ? 'Partido' : 'Partidos'} jugado(s)
+                      </span>
+                      <div className="mt-4 space-y-3">
+                        {item.matches.map(m => (
+                          <div key={m.id} className="bg-white border border-slate-200/80 rounded-xl p-2.5 shadow-sm text-xs flex items-center justify-between">
+                            <span className="font-semibold truncate max-w-[85px]">{m.homeTeam.split(' ')[0]}</span>
+                            <span className="font-mono bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-[11px]">
+                              {m.homeScore} - {m.awayScore}
+                            </span>
+                            <span className="font-semibold truncate max-w-[85px] text-right">{m.awayTeam.split(' ')[0]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right Panel: Top Users of the Day */}
+                    <div className="p-5 flex-1 flex flex-col justify-between text-left">
+                      <div>
+                        {/* Winner Banner */}
+                        <div className="flex items-center space-x-2.5 mb-4">
+                          <Crown className="h-5 w-5 text-yellow-500 fill-yellow-400 animate-bounce" />
+                          <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-wide">
+                            Destacado(s) de la Jornada
+                          </h4>
+                        </div>
+
+                        {/* Winner Profiles list */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          {winners.map(w => {
+                            const isCurrent = currentUser && w.userId === currentUser.uid;
+                            return (
+                              <div key={w.userId} className={`p-4 rounded-xl border flex items-center gap-3 bg-gradient-to-r ${
+                                isCurrent 
+                                  ? 'from-blue-50 to-indigo-50 border-blue-300' 
+                                  : 'from-amber-50/40 to-yellow-50/20 border-amber-250 shadow-sm'
+                              }`}>
+                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm border border-yellow-300">
+                                  👑
+                                </div>
+                                <div className="text-left truncate">
+                                  <div className="font-extrabold text-xs text-slate-900 truncate flex items-center gap-1.5 text-left justify-start">
+                                    <span className="truncate">{w.userName}</span>
+                                    {isCurrent && (
+                                      <span className="bg-blue-600 text-white text-[8px] px-1.5 py-0.2 rounded font-black uppercase tracking-wider shrink-0 z-10">Tú</span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono truncate">{w.userEmail}</div>
+                                  <div className="text-[11px] text-amber-700 font-extrabold mt-1">
+                                    {w.points} Puntos <span className="text-slate-400 font-normal">({w.exactCount} plenos)</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Other top positions of the day */}
+                      {runnersUp.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-left">
+                            Otros puntajes altos:
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {runnersUp.map(r => (
+                              <div key={r.userId} className="bg-slate-100 border text-[11px] font-semibold text-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                <span>{r.userName.split(' ')[0]}</span>
+                                <span className="font-mono font-black text-slate-900">+{r.points} pts</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Visual Podium Highlights */}
+          {standings.length > 0 && (
+            <div
+              className="rounded-3xl p-6 shadow-xl overflow-hidden relative"
+              style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}
+            >
           {/* Decorative background sparkles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-4 right-8 w-1 h-1 bg-yellow-400 rounded-full opacity-60 animate-ping" style={{ animationDuration: '3s' }} />
@@ -552,6 +774,8 @@ Kit de aliento:
           </div>
         )}
       </div>
+    </>
+  )}
 
       {/* Rules block explanation */}
       <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex items-start space-x-3.5">

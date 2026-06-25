@@ -261,6 +261,33 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             const totalMatches = phaseMatches.length;
             const finishedInPhase = phaseMatches.filter(m => m.status === 'finished').length;
 
+            // Calculate if the phase is starting soon (within 3 days) and has no matches loaded yet
+            let startsSoon = false;
+            if (totalMatches === 0 && !enabledPhases.includes(stg.tag)) {
+              const prevPhaseTag = stg.tag === '16avos' ? 'grupos' 
+                                : stg.tag === '8vos' ? '16avos' 
+                                : stg.tag === 'cuartos' ? '8vos' 
+                                : stg.tag === 'semis' ? 'cuartos' 
+                                : stg.tag === 'final' ? 'semis' 
+                                : null;
+              if (prevPhaseTag) {
+                const prevMatches = matches.filter(m => (m.phase || 'grupos') === prevPhaseTag);
+                const prevTimes = prevMatches.map(m => new Date(m.matchDate).getTime()).filter(t => !isNaN(t));
+                const lastPrevMatchTime = prevTimes.length > 0 ? Math.max(...prevTimes) : null;
+                if (lastPrevMatchTime !== null) {
+                  const baseStart = lastPrevMatchTime + 24 * 60 * 60 * 1000;
+                  let dayOffset = 0;
+                  if (stg.tag === 'cuartos' || stg.tag === 'semis') dayOffset = 1;
+                  else if (stg.tag === 'final') dayOffset = 3;
+                  
+                  const estimatedStartTime = baseStart + dayOffset * 24 * 60 * 60 * 1000;
+                  const now = Date.now();
+                  const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+                  startsSoon = (estimatedStartTime - now) <= threeDaysMs && (estimatedStartTime - now) > 0;
+                }
+              }
+            }
+
             return (
               <button
                 key={stg.tag}
@@ -270,11 +297,17 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   }
                 }}
                 disabled={!isUnlocked}
-                className={`flex items-start gap-2.5 p-3 px-4 rounded-xl border-2 transition-all text-left flex-1 min-w-[135px] sm:min-w-[155px] ${
+                className={`flex items-start gap-2.5 p-3 px-4 rounded-xl border-2 transition-all text-left flex-1 min-w-[135px] sm:min-w-[155px] relative ${
                   isSelected
                     ? 'border-blue-600 bg-blue-50/20 shadow-sm cursor-pointer'
                     : isUnlocked
-                      ? 'border-slate-200 bg-white hover:border-slate-400 cursor-pointer'
+                      ? startsSoon
+                        ? 'border-blue-300 bg-blue-50/20 hover:border-blue-400 hover:bg-blue-50/35 cursor-pointer shadow-sm shadow-blue-400/10 animate-pulse'
+                        : totalMatches > 0 && finishedInPhase / totalMatches >= 0.7 && finishedInPhase / totalMatches < 1
+                          ? 'border-rose-300 bg-rose-50/20 hover:border-rose-450 hover:bg-rose-50/35 cursor-pointer shadow-sm shadow-rose-400/10 animate-pulse'
+                          : totalMatches > 0 && finishedInPhase < totalMatches
+                            ? 'border-amber-300 bg-amber-50/25 hover:border-amber-400 hover:bg-amber-50/40 cursor-pointer shadow-sm shadow-amber-400/10'
+                            : 'border-slate-200 bg-white hover:border-slate-400 cursor-pointer'
                       : 'border-slate-200 bg-slate-50/60 opacity-65 cursor-not-allowed select-none'
                 }`}
                 title={
@@ -283,6 +316,24 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                     : `La fase de ${stg.title} está programada. Se habilitará cuando finalice la fase anterior.`
                 }
               >
+                {startsSoon ? (
+                  <span className="absolute -top-2.5 -right-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow border border-indigo-500 animate-pulse select-none flex items-center gap-1 z-20 text-[8px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping inline-block"></span>
+                    Pronto empieza ⚡
+                  </span>
+                ) : totalMatches > 0 && finishedInPhase / totalMatches >= 0.7 && finishedInPhase / totalMatches < 1 ? (
+                  <span className="absolute -top-2.5 -right-1.5 bg-gradient-to-r from-orange-500 to-rose-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow border border-rose-500 animate-pulse select-none flex items-center gap-1 z-20 text-[8px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping inline-block"></span>
+                    ¡Cierra pronto! ⏳
+                  </span>
+                ) : (
+                  totalMatches > 0 && finishedInPhase < totalMatches && !isSelected && (
+                    <span className="absolute -top-2.5 -right-1 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-955 font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow border border-yellow-400 animate-pulse select-none flex items-center gap-1 z-10 text-[8px]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-950 animate-ping inline-block"></span>
+                      ¡A votar! 🔥
+                    </span>
+                  )
+                )}
                 <div className={`p-1.5 rounded-lg shrink-0 ${
                   isSelected
                     ? 'bg-blue-600 text-white'
@@ -307,6 +358,8 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                       <span className={finishedInPhase === totalMatches ? 'text-blue-700' : 'text-emerald-600'}>
                         {finishedInPhase}/{totalMatches} Jugados
                       </span>
+                    ) : startsSoon ? (
+                      <span className="text-blue-600 font-extrabold animate-pulse">Pronto empieza ⚡</span>
                     ) : isUnlocked ? (
                       <span className="text-amber-600">Por configurar ⚙️</span>
                     ) : (
