@@ -1,0 +1,434 @@
+[
+  {
+    "local": "México",
+    "visitante": "Sudáfrica",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Corea del Sur",
+    "visitante": "Rep. Checa",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Rep. Checa",
+    "visitante": "Sudáfrica",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "México",
+    "visitante": "Corea del Sur",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Sudáfrica",
+    "visitante": "Corea del Sur",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Rep. Checa",
+    "visitante": "México",
+    "golesLocal": 0,
+    "golesVisitante": 3
+  },
+  {
+    "local": "Canadá",
+    "visitante": "Bosnia y Herzegovina",
+    "golesLocal": 1,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Qatar",
+    "visitante": "Suiza",
+    "golesLocal": 0,
+    "golesVisitante": 3
+  },
+  {
+    "local": "Suiza",
+    "visitante": "Bosnia y Herzegovina",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Canadá",
+    "visitante": "Qatar",
+    "golesLocal": 3,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Bosnia y Herzegovina",
+    "visitante": "Qatar",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Suiza",
+    "visitante": "Canadá",
+    "golesLocal": 2,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Brasil",
+    "visitante": "Marruecos",
+    "golesLocal": 3,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Haití",
+    "visitante": "Escocia",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Escocia",
+    "visitante": "Marruecos",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Brasil",
+    "visitante": "Haití",
+    "golesLocal": 5,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Escocia",
+    "visitante": "Brasil",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Marruecos",
+    "visitante": "Haití",
+    "golesLocal": 3,
+    "golesVisitante": 0
+  },
+  {
+    "local": "EE.UU.",
+    "visitante": "Paraguay",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Australia",
+    "visitante": "Turquía",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "EE.UU.",
+    "visitante": "Australia",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Turquía",
+    "visitante": "Paraguay",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Paraguay",
+    "visitante": "Australia",
+    "golesLocal": 0,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Turquía",
+    "visitante": "EE.UU.",
+    "golesLocal": 1,
+    "golesVisitante": 3
+  },
+  {
+    "local": "Alemania",
+    "visitante": "Curazao",
+    "golesLocal": 4,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Costa de Marfil",
+    "visitante": "Ecuador",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Alemania",
+    "visitante": "Costa de Marfil",
+    "golesLocal": 3,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Ecuador",
+    "visitante": "Curazao",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Curazao",
+    "visitante": "Costa de Marfil",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Ecuador",
+    "visitante": "Alemania",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Países Bajos",
+    "visitante": "Japón",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Suecia",
+    "visitante": "Túnez",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Países Bajos",
+    "visitante": "Suecia",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Túnez",
+    "visitante": "Japón",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Japón",
+    "visitante": "Suecia",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Túnez",
+    "visitante": "Países Bajos",
+    "golesLocal": 0,
+    "golesVisitante": 3
+  },
+  {
+    "local": "Bélgica",
+    "visitante": "Egipto",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Irán",
+    "visitante": "Nueva Zelanda",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Bélgica",
+    "visitante": "Irán",
+    "golesLocal": 3,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Nueva Zelanda",
+    "visitante": "Egipto",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Nueva Zelanda",
+    "visitante": "Bélgica",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Egipto",
+    "visitante": "Irán",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "España",
+    "visitante": "Cabo Verde",
+    "golesLocal": 3,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Arabia Saudí",
+    "visitante": "Uruguay",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "España",
+    "visitante": "Arabia Saudí",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Uruguay",
+    "visitante": "Cabo Verde",
+    "golesLocal": 4,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Cabo Verde",
+    "visitante": "Arabia Saudí",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Uruguay",
+    "visitante": "España",
+    "golesLocal": 2,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Francia",
+    "visitante": "Senegal",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Irak",
+    "visitante": "Noruega",
+    "golesLocal": 0,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Francia",
+    "visitante": "Irak",
+    "golesLocal": 3,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Noruega",
+    "visitante": "Senegal",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Senegal",
+    "visitante": "Irak",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Noruega",
+    "visitante": "Francia",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Argentina",
+    "visitante": "Argelia",
+    "golesLocal": 3,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Austria",
+    "visitante": "Jordania",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Argentina",
+    "visitante": "Austria",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Jordania",
+    "visitante": "Argelia",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Argelia",
+    "visitante": "Austria",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Jordania",
+    "visitante": "Argentina",
+    "golesLocal": 0,
+    "golesVisitante": 4
+  },
+  {
+    "local": "Portugal",
+    "visitante": "RD de Congo",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Uzbekistán",
+    "visitante": "Colombia",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Portugal",
+    "visitante": "Uzbekistán",
+    "golesLocal": 3,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Colombia",
+    "visitante": "RD de Congo",
+    "golesLocal": 3,
+    "golesVisitante": 1
+  },
+  {
+    "local": "RD de Congo",
+    "visitante": "Uzbekistán",
+    "golesLocal": 0,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Colombia",
+    "visitante": "Portugal",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Inglaterra",
+    "visitante": "Croacia",
+    "golesLocal": 2,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Ghana",
+    "visitante": "Panamá",
+    "golesLocal": 1,
+    "golesVisitante": 1
+  },
+  {
+    "local": "Inglaterra",
+    "visitante": "Ghana",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Panamá",
+    "visitante": "Croacia",
+    "golesLocal": 1,
+    "golesVisitante": 2
+  },
+  {
+    "local": "Croacia",
+    "visitante": "Ghana",
+    "golesLocal": 2,
+    "golesVisitante": 0
+  },
+  {
+    "local": "Panamá",
+    "visitante": "Inglaterra",
+    "golesLocal": 1,
+    "golesVisitante": 3
+  }
+]
