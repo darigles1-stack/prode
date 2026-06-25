@@ -46,6 +46,7 @@ interface AdminPanelProps {
   onUpdateUser?: (userId: string, updates: Partial<UserProfile>) => Promise<void>;
   enabledPhases?: string[];
   onUpdateEnabledPhases?: (phases: string[]) => Promise<void>;
+  onClearAllMatchResults?: () => Promise<void>;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -61,7 +62,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   users = [],
   onUpdateUser,
   enabledPhases = ['grupos'],
-  onUpdateEnabledPhases
+  onUpdateEnabledPhases,
+  onClearAllMatchResults
 }) => {
   // --- User Management List ---
   const [internalUsers, setInternalUsers] = useState<UserProfile[]>([]);
@@ -246,6 +248,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [resetStep, setResetStep] = useState(0); // 0 = initial, 1 = first confirmation, 2 = second confirmation
   const [isResetting, setIsResetting] = useState(false);
   const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Clear Match Results States
+  const [clearResultsStep, setClearResultsStep] = useState(0); // 0 = initial, 1 = confirm warning
+  const [isClearingResults, setIsClearingResults] = useState(false);
+  const [clearResultsFeedback, setClearResultsFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const handleClearAllMatchResultsAction = async () => {
+    if (!onClearAllMatchResults) return;
+    setIsClearingResults(true);
+    setClearResultsFeedback(null);
+    try {
+      await onClearAllMatchResults();
+      setClearResultsFeedback({ type: 'success', msg: '¡Todos los resultados reales han sido eliminados de manera segura! Todos los partidos volvieron a estado pendiente y se recalcularon los puntos de los usuarios a 0. Los pronósticos se mantuvieron intactos.' });
+      setClearResultsStep(0);
+    } catch (err: any) {
+      console.error(err);
+      setClearResultsFeedback({ type: 'error', msg: `Error al eliminar los resultados reales: ${err.message || err}` });
+    } finally {
+      setIsClearingResults(false);
+    }
+  };
 
   // Custom JSON Upload States
   const [customJsonText, setCustomJsonText] = useState('');
@@ -1236,6 +1259,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 {resetFeedback.msg}
               </div>
             )}
+
+            {/* VACIAR RESULTADOS REALES (SIMULADOR) */}
+            <div className="border-t border-slate-100 pt-3 mt-3">
+              <p className="text-[10px] text-slate-500 leading-relaxed mb-2 font-sans">
+                ¿Solo querés re-simular? Vaciá únicamente los marcadores reales y recalculá los puntos a 0. Se conservarán todos los pronósticos y usuarios.
+              </p>
+              {clearResultsStep === 0 ? (
+                <button
+                  type="button"
+                  id="btn-clear-results-init"
+                  onClick={() => setClearResultsStep(1)}
+                  className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-250 font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer select-none"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-amber-600" />
+                  <span>Vaciar Resultados Reales (Simulador) 🗑️</span>
+                </button>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-3 font-sans">
+                  <p className="text-xs font-bold text-amber-900 flex items-center gap-1.5 text-left">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    ¿Confirmás vaciar marcadores reales?
+                  </p>
+                  <p className="text-[10.5px] text-amber-800 leading-relaxed text-left">
+                    Esto borrará el resultado real de todos los partidos jugados y restablecerá sus estados a pendiente. Los puntos de los usuarios volverán a 0, pero sus pronósticos y perfiles quedarán intactos.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      id="btn-clear-results-confirm"
+                      onClick={handleClearAllMatchResultsAction}
+                      disabled={isClearingResults}
+                      className="flex-grow bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold py-2 px-3 rounded-lg transition-all cursor-pointer shadow flex items-center justify-center gap-1.5 select-none"
+                    >
+                      {isClearingResults ? (
+                        <RefreshCcw className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                      <span>SÍ, VACIAR RESULTADOS</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClearResultsStep(0)}
+                      disabled={isClearingResults}
+                      className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-650 text-[11px] font-bold py-2 px-3 rounded-lg transition-all cursor-pointer select-none"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+              {clearResultsFeedback && (
+                <div className={`mt-2 text-[11px] p-3 rounded-xl border font-semibold text-left ${
+                  clearResultsFeedback.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-250' 
+                    : 'bg-rose-50 text-rose-800 border-rose-250'
+                }`}>
+                  {clearResultsFeedback.msg}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1549,7 +1633,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono">
+                      <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono flex-wrap gap-y-1">
                         <Calendar className="h-3.5 w-3.5 shrink-0" />
                         <span>{new Date(match.matchDate).toLocaleString('es-AR')}</span>
                         {isPastKickoff && (
@@ -1558,6 +1642,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             Jugándose / Finalizado
                           </span>
                         )}
+                        <span className="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-blue-200">
+                          {(() => {
+                            const phaseLabels: { [key: string]: string } = {
+                              'grupos': 'Fase de Grupos',
+                              '16avos': '16avos de Final',
+                              '8vos': '8vos de Final',
+                              'cuartos': 'Cuartos de Final',
+                              'semis': 'Semifinales',
+                              'final': 'Gran Final'
+                            };
+                            const p = match.phase || 'grupos';
+                            return phaseLabels[p] || (p.toLowerCase().includes('grupo') ? `Grupo ${p.replace(/grupo/i, '').trim()}` : p);
+                          })()}
+                        </span>
                       </div>
                     </div>
 
@@ -1672,11 +1770,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono">
+                        <div className="flex items-center space-x-2 mt-1.5 text-xs text-slate-500 font-mono flex-wrap gap-y-1">
                           <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                           <span>{new Date(match.matchDate).toLocaleDateString('es-AR')}</span>
                           <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">
                             Marcador: {match.homeScore} - {match.awayScore}
+                          </span>
+                          <span className="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-blue-200">
+                            {(() => {
+                              const phaseLabels: { [key: string]: string } = {
+                                'grupos': 'Fase de Grupos',
+                                '16avos': '16avos de Final',
+                                '8vos': '8vos de Final',
+                                'cuartos': 'Cuartos de Final',
+                                'semis': 'Semifinales',
+                                'final': 'Gran Final'
+                              };
+                              const p = match.phase || 'grupos';
+                              return phaseLabels[p] || (p.toLowerCase().includes('grupo') ? `Grupo ${p.replace(/grupo/i, '').trim()}` : p);
+                            })()}
                           </span>
                         </div>
                       </div>

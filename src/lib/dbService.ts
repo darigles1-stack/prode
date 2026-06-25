@@ -289,9 +289,19 @@ export const dbService = {
               } as UserProfile;
               
               // Ensure backend admin aligns with the boostrapped rule
-              if (isBootstrappedAdmin && !profile.isAdmin) {
-                profile.isAdmin = true;
-                await updateDoc(userDocRef, { isAdmin: true });
+              if (isBootstrappedAdmin) {
+                if (!profile.isAdmin) {
+                  profile.isAdmin = true;
+                  await updateDoc(userDocRef, { isAdmin: true });
+                }
+                try {
+                  await setDoc(doc(db, 'admins', user.uid), {
+                    email: user.email,
+                    assignedAt: Timestamp.now()
+                  }, { merge: true });
+                } catch (adminErr) {
+                  console.warn("Failed to write to admins collection inside onAuthChange:", adminErr);
+                }
               }
             } else {
               const createdAtTimestamp = Timestamp.now();
@@ -378,9 +388,19 @@ export const dbService = {
           updatedAt
         } as UserProfile;
 
-        if (isBootstrappedAdmin && !profile.isAdmin) {
-          profile.isAdmin = true;
-          await updateDoc(userDocRef, { isAdmin: true });
+        if (isBootstrappedAdmin) {
+          if (!profile.isAdmin) {
+            profile.isAdmin = true;
+            await updateDoc(userDocRef, { isAdmin: true });
+          }
+          try {
+            await setDoc(doc(db, 'admins', user.uid), {
+              email: user.email,
+              assignedAt: Timestamp.now()
+            }, { merge: true });
+          } catch (adminErr) {
+            console.warn("Failed to write to admins collection inside loginWithGoogle:", adminErr);
+          }
         }
       } else {
         const createdAtTimestamp = Timestamp.now();
@@ -873,6 +893,66 @@ export const dbService = {
       // Perform complete recalculation cleanly
       await this.syncUserForecastsAndPoints();
     }
+  },
+
+  async clearAllMatchResults(): Promise<void> {
+    if (shouldUseFirebase()) {
+      try {
+        const matchesRef = collection(db, 'matches');
+        const snap = await getDocs(matchesRef);
+        
+        let batch = writeBatch(db);
+        let writeCount = 0;
+        
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (data.status === 'finished' || data.homeScore !== null || data.awayScore !== null) {
+            batch.update(doc(db, 'matches', docSnap.id), {
+              homeScore: null,
+              awayScore: null,
+              status: 'pending',
+              updatedAt: Timestamp.now()
+            });
+            writeCount++;
+            await checkAndCommitBatch();
+          }
+        }
+
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+
+        await this.syncUserForecastsAndPoints();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'clearAllMatchResults');
+        throw err;
+      }
+    } else {
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      let updated = false;
+      matches.forEach(m => {
+        if (m.status === 'finished' || m.homeScore !== null || m.awayScore !== null) {
+          m.homeScore = null;
+          m.awayScore = null;
+          m.status = 'pending';
+          m.updatedAt = new Date().toISOString();
+          updated = true;
+        }
+      });
+      if (updated) {
+        setLocalData('matches', matches);
+        await this.syncUserForecastsAndPoints();
+      }
+    }
+    window.dispatchEvent(new Event('prode_db_updated'));
   },
 
   // --- LEADERBOARD STANDINGS ---
@@ -1376,22 +1456,22 @@ export const dbService = {
       if (targetPhase === '16avos') {
         if (mode === 'placeholder') {
           pairings = [
-            { home: "1° Grupo A 🏆", away: "Mejor 3° Grupo C/D/E/F 🏆" },
-            { home: "2° Grupo A 🏆", away: "2° Grupo B 🏆" },
-            { home: "1° Grupo B 🏆", away: "Mejor 3° Grupo A/C/D 🏆" },
-            { home: "1° Grupo C 🏆", away: "2° Grupo D 🏆" },
-            { home: "1° Grupo D 🏆", away: "Mejor 3° Grupo B/E/F 🏆" },
-            { home: "2° Grupo C 🏆", away: "2° Grupo E 🏆" },
-            { home: "1° Grupo E 🏆", away: "Mejor 3° Grupo A/D/F 🏆" },
-            { home: "1° Grupo F 🏆", away: "2° Grupo G 🏆" },
-            { home: "1° Grupo G 🏆", away: "Mejor 3° Grupo B/C/H 🏆" },
-            { home: "2° Grupo F 🏆", away: "2° Grupo H 🏆" },
-            { home: "1° Grupo H 🏆", away: "Mejor 3° Grupo A/I/J 🏆" },
-            { home: "1° Grupo I 🏆", away: "2° Grupo J 🏆" },
-            { home: "1° Grupo J 🏆", away: "Mejor 3° Grupo G/K/L 🏆" },
-            { home: "2° Grupo I 🏆", away: "2° Grupo K 🏆" },
-            { home: "1° Grupo K 🏆", away: "Mejor 3° Grupo E/H/L 🏆" },
-            { home: "1° Grupo L 🏆", away: "2° Grupo A/B 🏆" }
+            { home: "1° Grupo E 🏆", away: "Mejor 3° Grupo A/B/C/D/F 🏆" }, // Match 74
+            { home: "1° Grupo I 🏆", away: "Mejor 3° Grupo C/D/F/G/H 🏆" }, // Match 77
+            { home: "2° Grupo A 🏆", away: "2° Grupo B 🏆" }, // Match 73
+            { home: "1° Grupo F 🏆", away: "2° Grupo C 🏆" }, // Match 75
+            { home: "1° Grupo C 🏆", away: "2° Grupo F 🏆" }, // Match 76
+            { home: "2° Grupo E 🏆", away: "2° Grupo I 🏆" }, // Match 78
+            { home: "1° Grupo A 🏆", away: "Mejor 3° Grupo C/E/F/H/I 🏆" }, // Match 79
+            { home: "1° Grupo L 🏆", away: "Mejor 3° Grupo E/H/I/J/K 🏆" }, // Match 80
+            { home: "2° Grupo K 🏆", away: "2° Grupo L 🏆" }, // Match 83
+            { home: "1° Grupo H 🏆", away: "2° Grupo J 🏆" }, // Match 84
+            { home: "1° Grupo D 🏆", away: "Mejor 3° Grupo B/E/F/I/J 🏆" }, // Match 81
+            { home: "1° Grupo G 🏆", away: "Mejor 3° Grupo A/E/H/I/J 🏆" }, // Match 82
+            { home: "1° Grupo J 🏆", away: "2° Grupo H 🏆" }, // Match 86
+            { home: "2° Grupo D 🏆", away: "2° Grupo G 🏆" }, // Match 88
+            { home: "1° Grupo B 🏆", away: "Mejor 3° Grupo E/F/G/I/J 🏆" }, // Match 85
+            { home: "1° Grupo K 🏆", away: "Mejor 3° Grupo D/E/I/J/L 🏆" } // Match 87
           ];
         } else {
           // Build dynamic group standings
@@ -1546,49 +1626,23 @@ export const dbService = {
             return `Mejor 3° Grupo ${groupLetters} 🏆`;
           };
 
-          const getSecondOfGroupAB = (): string => {
-            const grBFinished = (groupMatches.filter(m => {
-              const hClean = findCleanName(m.homeTeam);
-              return teamToGroup[hClean] === 'Grupo B';
-            }).length > 0) && groupMatches.filter(m => {
-              const hClean = findCleanName(m.homeTeam);
-              return teamToGroup[hClean] === 'Grupo B';
-            }).every(m => m.status === 'finished');
-
-            const grAFinished = (groupMatches.filter(m => {
-              const hClean = findCleanName(m.homeTeam);
-              return teamToGroup[hClean] === 'Grupo A';
-            }).length > 0) && groupMatches.filter(m => {
-              const hClean = findCleanName(m.homeTeam);
-              return teamToGroup[hClean] === 'Grupo A';
-            }).every(m => m.status === 'finished');
-
-            if (grBFinished && seconds[1] && !seconds[1].includes('Grupo B')) {
-              return seconds[1];
-            }
-            if (grAFinished && seconds[0] && !seconds[0].includes('Grupo A')) {
-              return seconds[0];
-            }
-            return "2° Grupo A/B 🏆";
-          };
-
           pairings = [
-            { home: getFirstOfGroup("Grupo A", 0), away: getBestThirdOf(['Grupo C', 'Grupo D', 'Grupo E', 'Grupo F']) },
-            { home: getSecondOfGroup("Grupo A", 0), away: getSecondOfGroup("Grupo B", 1) },
-            { home: getFirstOfGroup("Grupo B", 1), away: getBestThirdOf(['Grupo A', 'Grupo C', 'Grupo D']) },
-            { home: getFirstOfGroup("Grupo C", 2), away: getSecondOfGroup("Grupo D", 3) },
-            { home: getFirstOfGroup("Grupo D", 3), away: getBestThirdOf(['Grupo B', 'Grupo E', 'Grupo F']) },
-            { home: getSecondOfGroup("Grupo C", 2), away: getSecondOfGroup("Grupo E", 4) },
-            { home: getFirstOfGroup("Grupo E", 4), away: getBestThirdOf(['Grupo A', 'Grupo D', 'Grupo F']) },
-            { home: getFirstOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo G", 6) },
-            { home: getFirstOfGroup("Grupo G", 6), away: getBestThirdOf(['Grupo B', 'Grupo C', 'Grupo H']) },
-            { home: getSecondOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo H", 7) },
-            { home: getFirstOfGroup("Grupo H", 7), away: getSecondOfGroup("Grupo J", 9) },
-            { home: getFirstOfGroup("Grupo I", 8), away: getBestThirdOf(['Grupo C', 'Grupo D', 'Grupo G', 'Grupo H']) },
-            { home: getFirstOfGroup("Grupo J", 9), away: getSecondOfGroup("Grupo H", 7) },
-            { home: getSecondOfGroup("Grupo I", 8), away: getSecondOfGroup("Grupo K", 10) },
-            { home: getFirstOfGroup("Grupo K", 10), away: getBestThirdOf(['Grupo E', 'Grupo H', 'Grupo L']) },
-            { home: getFirstOfGroup("Grupo L", 11), away: getSecondOfGroupAB() }
+            { home: getFirstOfGroup("Grupo E", 4), away: getBestThirdOf(['Grupo A', 'Grupo B', 'Grupo C', 'Grupo D', 'Grupo F']) }, // Match 74
+            { home: getFirstOfGroup("Grupo I", 8), away: getBestThirdOf(['Grupo C', 'Grupo D', 'Grupo F', 'Grupo G', 'Grupo H']) }, // Match 77
+            { home: getSecondOfGroup("Grupo A", 0), away: getSecondOfGroup("Grupo B", 1) }, // Match 73
+            { home: getFirstOfGroup("Grupo F", 5), away: getSecondOfGroup("Grupo C", 2) }, // Match 75
+            { home: getFirstOfGroup("Grupo C", 2), away: getSecondOfGroup("Grupo F", 5) }, // Match 76
+            { home: getSecondOfGroup("Grupo E", 4), away: getSecondOfGroup("Grupo I", 8) }, // Match 78
+            { home: getFirstOfGroup("Grupo A", 0), away: getBestThirdOf(['Grupo C', 'Grupo E', 'Grupo F', 'Grupo H', 'Grupo I']) }, // Match 79
+            { home: getFirstOfGroup("Grupo L", 11), away: getBestThirdOf(['Grupo E', 'Grupo H', 'Grupo I', 'Grupo J', 'Grupo K']) }, // Match 80
+            { home: getSecondOfGroup("Grupo K", 10), away: getSecondOfGroup("Grupo L", 11) }, // Match 83
+            { home: getFirstOfGroup("Grupo H", 7), away: getSecondOfGroup("Grupo J", 9) }, // Match 84
+            { home: getFirstOfGroup("Grupo D", 3), away: getBestThirdOf(['Grupo B', 'Grupo E', 'Grupo F', 'Grupo I', 'Grupo J']) }, // Match 81
+            { home: getFirstOfGroup("Grupo G", 6), away: getBestThirdOf(['Grupo A', 'Grupo E', 'Grupo H', 'Grupo I', 'Grupo J']) }, // Match 82
+            { home: getFirstOfGroup("Grupo J", 9), away: getSecondOfGroup("Grupo H", 7) }, // Match 86
+            { home: getSecondOfGroup("Grupo D", 3), away: getSecondOfGroup("Grupo G", 6) }, // Match 88
+            { home: getFirstOfGroup("Grupo B", 1), away: getBestThirdOf(['Grupo E', 'Grupo F', 'Grupo G', 'Grupo I', 'Grupo J']) }, // Match 85
+            { home: getFirstOfGroup("Grupo K", 10), away: getBestThirdOf(['Grupo D', 'Grupo E', 'Grupo I', 'Grupo J', 'Grupo L']) } // Match 87
           ];
         }
       } else {
@@ -1744,28 +1798,34 @@ export const dbService = {
 
   subscribeSettings(callback: (settingsData: { enabledPhases: string[] }) => void) {
     if (shouldUseFirebase()) {
-      const docRef = doc(db, 'settings', 'config');
-      return onSnapshot(docRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          callback({
-            enabledPhases: data.enabledPhases || ['grupos']
-          });
-        } else {
-          setDoc(docRef, { enabledPhases: ['grupos'] })
-            .then(() => callback({ enabledPhases: ['grupos'] }))
-            .catch(err => console.error("Error creating default settings:", err));
-        }
+      const colRef = collection(db, 'fases');
+      return onSnapshot(colRef, (snapshot) => {
+        const phasesMap: { [key: string]: number } = {
+          grupos: 1,
+          '16avos': 0,
+          '8vos': 0,
+          cuartos: 0,
+          semis: 0,
+          final: 0
+        };
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          phasesMap[docSnap.id] = data.enabled ?? 0;
+        });
+        const enabledPhases = Object.keys(phasesMap).filter(k => phasesMap[k] === 1);
+        callback({ enabledPhases });
       }, (error) => {
-        console.error("Error subscribing to settings:", error);
+        console.error("Error subscribing to settings (fases):", error);
         callback({ enabledPhases: ['grupos'] });
       });
     } else {
       const getLocalSettings = () => {
-        const stored = localStorage.getItem('prode_enabled_phases');
+        const stored = localStorage.getItem('prode_phases_map');
         if (stored) {
           try {
-            return { enabledPhases: JSON.parse(stored) };
+            const phasesMap = JSON.parse(stored);
+            const enabledPhases = Object.keys(phasesMap).filter(k => phasesMap[k] === 1);
+            return { enabledPhases };
           } catch (e) {}
         }
         return { enabledPhases: ['grupos'] };
@@ -1786,13 +1846,28 @@ export const dbService = {
   async updateEnabledPhases(enabledPhases: string[]): Promise<void> {
     if (shouldUseFirebase()) {
       try {
-        const docRef = doc(db, 'settings', 'config');
-        await setDoc(docRef, { enabledPhases }, { merge: true });
+        const allPhases = ['grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'];
+        for (const phase of allPhases) {
+          const isEnabled = enabledPhases.includes(phase);
+          const docRef = doc(db, 'fases', phase);
+          await setDoc(docRef, { enabled: isEnabled ? 1 : 0 }, { merge: true });
+        }
       } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, 'settings/config');
+        handleFirestoreError(err, OperationType.UPDATE, 'fases/phases');
       }
     } else {
-      localStorage.setItem('prode_enabled_phases', JSON.stringify(enabledPhases));
+      const phasesMap: { [key: string]: number } = {
+        grupos: 0,
+        '16avos': 0,
+        '8vos': 0,
+        cuartos: 0,
+        semis: 0,
+        final: 0
+      };
+      enabledPhases.forEach(p => {
+        phasesMap[p] = 1;
+      });
+      localStorage.setItem('prode_phases_map', JSON.stringify(phasesMap));
       window.dispatchEvent(new Event('prode_db_updated'));
     }
   },
@@ -1854,10 +1929,13 @@ export const dbService = {
           }
         }
 
-        // 4. Reset enabled phases to just 'grupos'
-        const settingsRef = doc(db, 'settings', 'config');
-        batch.set(settingsRef, { enabledPhases: ['grupos'] }, { merge: true });
-        writeCount++;
+        // 4. Reset enabled phases under /fases
+        const allPhases = ['grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'];
+        for (const phase of allPhases) {
+          const phaseDocRef = doc(db, 'fases', phase);
+          batch.set(phaseDocRef, { enabled: phase === 'grupos' ? 1 : 0 }, { merge: true });
+          writeCount++;
+        }
 
         if (writeCount > 0) {
           await batch.commit();
@@ -1941,11 +2019,14 @@ export const dbService = {
           await checkAndCommitBatch();
         }
 
-        // 4. Reset enabled phases to just 'grupos'
-        const settingsRef = doc(db, 'settings', 'config');
-        batch.set(settingsRef, { enabledPhases: ['grupos'] }, { merge: true });
-        writeCount++;
-        await checkAndCommitBatch();
+        // 4. Reset enabled phases under /fases
+        const allPhases = ['grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'];
+        for (const phase of allPhases) {
+          const phaseDocRef = doc(db, 'fases', phase);
+          batch.set(phaseDocRef, { enabled: phase === 'grupos' ? 1 : 0 }, { merge: true });
+          writeCount++;
+          await checkAndCommitBatch();
+        }
 
         // 5. Add new custom matches of phase 'grupos'
         for (const item of customMatches) {
@@ -2051,8 +2132,20 @@ export const dbService = {
           };
         });
 
-        const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
-        const settings = settingsDoc.exists() ? settingsDoc.data() : { enabledPhases: ['grupos'] };
+        const phasesSnap = await getDocs(collection(db, 'fases'));
+        const phasesMap: { [key: string]: number } = {
+          grupos: 1,
+          '16avos': 0,
+          '8vos': 0,
+          cuartos: 0,
+          semis: 0,
+          final: 0
+        };
+        phasesSnap.forEach(d => {
+          phasesMap[d.id] = d.data().enabled ?? 0;
+        });
+        const enabledPhases = Object.keys(phasesMap).filter(k => phasesMap[k] === 1);
+        const settings = { enabledPhases };
 
         return {
           version: '1.0',
@@ -2186,11 +2279,15 @@ export const dbService = {
           await checkAndCommitBatch();
         }
 
-        // Set Settings Config
-        const settingsRef = doc(db, 'settings', 'config');
+        // Set Fases
         const enabledPhases = settings.enabledPhases || ['grupos'];
-        batch.set(settingsRef, { enabledPhases }, { merge: true });
-        writeCount++;
+        const allPhases = ['grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'];
+        for (const phase of allPhases) {
+          const isEnabled = enabledPhases.includes(phase);
+          const phaseDocRef = doc(db, 'fases', phase);
+          batch.set(phaseDocRef, { enabled: isEnabled ? 1 : 0 }, { merge: true });
+          writeCount++;
+        }
 
         if (writeCount > 0) {
           await batch.commit();

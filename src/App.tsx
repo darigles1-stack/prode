@@ -315,6 +315,10 @@ export default function App() {
     window.dispatchEvent(new Event('prode_db_updated'));
   };
 
+  const handleClearAllMatchResults = async () => {
+    return dbService.clearAllMatchResults();
+  };
+
   const handleSaveForecast = async (matchId: string, homeScore: number, awayScore: number) => {
     if (!currentUser) return;
     return dbService.saveForecast(
@@ -966,6 +970,7 @@ export default function App() {
                     onAddMatch={handleAddMatch} 
                     onSettleMatch={handleSettleMatch}
                     onUnsettleMatch={handleUnsettleMatch}
+                    onClearAllMatchResults={handleClearAllMatchResults}
                     prizes={prizes}
                     onUpdatePrizes={handleUpdatePrizes}
                     onLoadOfficialFixture={handleLoadOfficialFixture}
