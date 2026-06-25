@@ -3,6 +3,28 @@ import { Clock, Lock, Unlock, CheckCircle2, AlertCircle, Save, Calendar, ShieldC
 import { SoccerMatch, UserForecast } from '../types';
 import { getFlagForCountry, getCountryCode } from '../lib/worldCupData';
 
+const isPlaceholderTeam = (teamName: string): boolean => {
+  if (!teamName) return true;
+  const clean = teamName.toLowerCase().trim();
+  if (clean.includes('grupo') || 
+      clean.includes('ganador') || 
+      clean.includes('segundo') || 
+      clean.includes('mejor') || 
+      clean.includes('tbd') ||
+      clean.includes('clasificado') ||
+      clean.includes('pendiente') ||
+      clean.includes('por definir')) {
+    return true;
+  }
+  if (/^[1-4][a-l]$/i.test(clean)) {
+    return true;
+  }
+  if (/[1-4]°/.test(clean)) {
+    return true;
+  }
+  return false;
+};
+
 interface MatchesListProps {
   matches: SoccerMatch[];
   forecasts: UserForecast[];
@@ -152,10 +174,11 @@ export const MatchesList: React.FC<MatchesListProps> = ({
     const match = matches.find(m => m.id === matchId);
     if (!match) return;
     const matchPhase = match.phase || 'grupos';
-    const isPhaseUnlocked = isUserAdmin || matchPhase === 'grupos' || enabledPhases.includes(matchPhase);
+    const isNewPhase = matchPhase !== 'grupos';
+    const bothTeamsReady = !isNewPhase || (!isPlaceholderTeam(match.homeTeam) && !isPlaceholderTeam(match.awayTeam));
     
-    if (!isPhaseUnlocked) {
-      setErrorFeedback(prev => ({ ...prev, [matchId]: 'Esta fase aún no ha sido habilitada para votación' }));
+    if (!bothTeamsReady) {
+      setErrorFeedback(prev => ({ ...prev, [matchId]: 'Ambos equipos deben estar definidos para pronosticar' }));
       return;
     }
 
@@ -229,11 +252,8 @@ export const MatchesList: React.FC<MatchesListProps> = ({
           {phasesList.map((stg, index) => {
             const isSelected = selectedPhase === stg.tag;
             
-            // Check if phase is unlocked
+            // Check if phase is unlocked - all phases unlocked for navigation
             let isUnlocked = true;
-            if (stg.tag !== 'grupos' && !isUserAdmin) {
-              isUnlocked = enabledPhases.includes(stg.tag);
-            }
 
             const phaseMatches = matches.filter(m => (m.phase || 'grupos') === stg.tag);
             const totalMatches = phaseMatches.length;
@@ -342,6 +362,8 @@ export const MatchesList: React.FC<MatchesListProps> = ({
             const hasStarted = Date.now() >= new Date(match.matchDate).getTime();
             
             const matchPhase = match.phase || 'grupos';
+            const isNewPhase = matchPhase !== 'grupos';
+            const bothTeamsReady = !isNewPhase || (!isPlaceholderTeam(match.homeTeam) && !isPlaceholderTeam(match.awayTeam));
             const isPhaseUnlocked = isUserAdmin || matchPhase === 'grupos' || enabledPhases.includes(matchPhase);
 
             // Local input memory or default to loaded forecast
@@ -416,10 +438,10 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           Partido Finalizado
                         </span>
                       )
-                    ) : !isPhaseUnlocked ? (
-                      <span className="inline-flex items-center text-[10px] uppercase font-bold text-amber-600 bg-amber-55 border border-amber-200 px-2 py-0.5 rounded-full font-mono">
+                    ) : !bothTeamsReady ? (
+                      <span className="inline-flex items-center text-[10px] uppercase font-bold text-slate-500 bg-slate-100 border border-slate-250 px-2 py-0.5 rounded-full font-mono">
                         <Lock className="h-2.5 w-2.5 mr-1" />
-                        Fase Inactiva 🔒
+                        Rivales pendientes 🔒
                       </span>
                     ) : isLocked ? (
                       isUserAdmin ? (
@@ -527,7 +549,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={homeVal}
                           onChange={(e) => handleScoreChange(match.id, 'home', e.target.value)}
-                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
+                          disabled={!bothTeamsReady || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
@@ -542,7 +564,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                           maxLength={2}
                           value={awayVal}
                           onChange={(e) => handleScoreChange(match.id, 'away', e.target.value)}
-                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
+                          disabled={!bothTeamsReady || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id}
                           placeholder="-"
                           className="w-12 h-10 border border-slate-200 bg-slate-50 rounded-lg text-center text-base font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
                         />
@@ -550,26 +572,32 @@ export const MatchesList: React.FC<MatchesListProps> = ({
 
                       {/* Submit / Update Button for open matches */}
                       {(match.status === 'pending' || isUserAdmin) && (
-                        <button
-                          onClick={() => handleSubmit(match.id)}
-                          disabled={!isPhaseUnlocked || (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id || !isFormDirty}
-                          className={`px-3 py-2 text-xs font-bold rounded-lg flex items-center space-x-1 transition-all shadow-sm cursor-pointer ${
-                            (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin)
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed border'
-                              : savingId === match.id
-                                ? 'bg-amber-100 text-amber-700 border border-amber-250 cursor-not-allowed'
-                                : !isFormDirty 
-                                  ? 'bg-slate-55 text-slate-400 border border-slate-250 hover:text-slate-600 hover:bg-slate-100'
-                                  : 'bg-yellow-405 bg-yellow-400 text-blue-955 text-blue-900 border border-yellow-500/20 hover:bg-yellow-500'
-                          }`}
-                        >
-                          {savingId === match.id ? (
-                            <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Save className="h-3.5 w-3.5" />
-                          )}
-                          <span>{savingId === match.id ? 'Guardando...' : (forecast ? 'Actualizar' : 'Guardar')}</span>
-                        </button>
+                        bothTeamsReady ? (
+                          <button
+                            onClick={() => handleSubmit(match.id)}
+                            disabled={(isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin) || savingId === match.id || !isFormDirty}
+                            className={`px-3 py-2 text-xs font-bold rounded-lg flex items-center space-x-1 transition-all shadow-sm cursor-pointer ${
+                              (isLocked && !isUserAdmin) || (match.status === 'finished' && !isUserAdmin)
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border'
+                                : savingId === match.id
+                                  ? 'bg-amber-100 text-amber-700 border border-amber-250 cursor-not-allowed'
+                                  : !isFormDirty 
+                                    ? 'bg-slate-55 text-slate-400 border border-slate-250 hover:text-slate-600 hover:bg-slate-100'
+                                    : 'bg-yellow-405 bg-yellow-400 text-blue-955 text-blue-900 border border-yellow-500/20 hover:bg-yellow-500'
+                            }`}
+                          >
+                            {savingId === match.id ? (
+                              <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Save className="h-3.5 w-3.5" />
+                            )}
+                            <span>{savingId === match.id ? 'Guardando...' : (forecast ? 'Actualizar' : 'Guardar')}</span>
+                          </button>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 bg-slate-50 border border-slate-150 p-2 rounded-lg font-medium leading-normal flex-1 text-center font-sans">
+                            Rivales pendientes para pronosticar
+                          </div>
+                        )
                       )}
                     </div>
                   </div>

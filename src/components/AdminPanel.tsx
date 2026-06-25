@@ -450,15 +450,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const downloadJSON = (data: any, fileName: string) => {
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(data, null, 2)
-    )}`;
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
+    downloadAnchor.setAttribute('href', url);
     downloadAnchor.setAttribute('download', fileName);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
-    downloadAnchor.remove();
+    
+    // Defer cleanup and revocation to give browser time to start the download
+    setTimeout(() => {
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
 
   const copyToClipboard = async (data: any, key: string) => {
@@ -1345,14 +1350,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 id="btn-export-all-json"
                 onClick={handleExportBackup}
                 disabled={backupLoading}
-                className="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer select-none disabled:opacity-55 shrink-0"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer select-none disabled:opacity-55 shrink-0"
               >
                 {backupLoading ? (
                   <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Download className="h-3.5 w-3.5" />
                 )}
-                <span>Bajar todo en un JSON para migrar base de datos</span>
+                <span>Descargar Backup Completo (JSON)</span>
               </button>
             </div>
 

@@ -1,13 +1,15 @@
 Modo DEV
 
 {
-  apiKey: "AIzaSyA8uSPGtLBPIPYb8v1E4gDa2AhS_tm7sBM",
-  authDomain: "crud-firebase-81d2e.firebaseapp.com",
-  projectId: "crud-firebase-81d2e",
-  storageBucket: "crud-firebase-81d2e.firebasestorage.app",
-  messagingSenderId: "175053339452",
-  appId: "1:175053339452:web:33df60fdfe00416460fc39"
-};
+  "projectId": "crud-firebase-81d2e",
+  "appId": "1:175053339452:web:33df60fdfe00416460fc39",
+  "apiKey": "AIzaSyA8uSPGtLBPIPYb8v1E4gDa2AhS_tm7sBM",
+  "authDomain": "crud-firebase-81d2e.firebaseapp.com",
+  "firestoreDatabaseId": "",
+  "storageBucket": "crud-firebase-81d2e.firebasestorage.app",
+  "messagingSenderId": "175053339452",
+  "measurementId": "G-T88J9J0W1Q"
+}
 
 Modo Prodi
 

@@ -2100,7 +2100,12 @@ export const dbService = {
     const isFirebase = shouldUseFirebase();
     if (isFirebase) {
       try {
-        const matchesSnap = await getDocs(collection(db, 'matches'));
+        let matchesSnap;
+        try {
+          matchesSnap = await getDocs(collection(db, 'matches'));
+        } catch (e: any) {
+          throw new Error(`Permisos insuficientes para leer la colección 'matches': ${e.message || e}`);
+        }
         const matches = matchesSnap.docs.map(d => {
           const data = d.data();
           return {
@@ -2111,7 +2116,12 @@ export const dbService = {
           };
         });
 
-        const forecastsSnap = await getDocs(collection(db, 'forecasts'));
+        let forecastsSnap;
+        try {
+          forecastsSnap = await getDocs(collection(db, 'forecasts'));
+        } catch (e: any) {
+          throw new Error(`Permisos insuficientes para leer la colección 'forecasts': ${e.message || e}`);
+        }
         const forecasts = forecastsSnap.docs.map(d => {
           const data = d.data();
           return {
@@ -2121,7 +2131,12 @@ export const dbService = {
           };
         });
 
-        const usersSnap = await getDocs(collection(db, 'users'));
+        let usersSnap;
+        try {
+          usersSnap = await getDocs(collection(db, 'users'));
+        } catch (e: any) {
+          throw new Error(`Permisos insuficientes para leer la colección 'users': ${e.message || e}`);
+        }
         const users = usersSnap.docs.map(d => {
           const data = d.data();
           return {
@@ -2132,7 +2147,12 @@ export const dbService = {
           };
         });
 
-        const phasesSnap = await getDocs(collection(db, 'fases'));
+        let phasesSnap;
+        try {
+          phasesSnap = await getDocs(collection(db, 'fases'));
+        } catch (e: any) {
+          throw new Error(`Permisos insuficientes para leer la colección 'fases': ${e.message || e}`);
+        }
         const phasesMap: { [key: string]: number } = {
           grupos: 1,
           '16avos': 0,
@@ -2155,9 +2175,8 @@ export const dbService = {
           users,
           settings
         };
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, 'backup-export');
-        throw err;
+      } catch (err: any) {
+        throw new Error(err.message || err);
       }
     } else {
       // Local Storage Backup
@@ -2186,7 +2205,22 @@ export const dbService = {
       throw new Error('Datos de resguardo inválidos.');
     }
 
-    const { matches = [], forecasts = [], users = [], settings = {} } = backupData;
+    let matches = backupData.matches;
+    let forecasts = backupData.forecasts;
+    let users = backupData.users;
+    let settings = backupData.settings || {};
+
+    if (backupData.data && typeof backupData.data === 'object') {
+      if (!matches && backupData.data.matches) matches = backupData.data.matches;
+      if (!forecasts && backupData.data.forecasts) forecasts = backupData.data.forecasts;
+      if (!users && backupData.data.users) users = backupData.data.users;
+      if (Object.keys(settings).length === 0 && backupData.data.settings) settings = backupData.data.settings;
+    }
+
+    matches = matches || [];
+    forecasts = forecasts || [];
+    users = users || [];
+
     const isFirebase = shouldUseFirebase();
 
     if (isFirebase) {
