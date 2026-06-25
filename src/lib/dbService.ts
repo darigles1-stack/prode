@@ -1709,8 +1709,43 @@ export const dbService = {
       let createdCounter = 0;
       for (let i = 0; i < pairings.length; i++) {
         const pair = pairings[i];
-        const dayOffset = Math.floor(i / 4);
-        const hourOffset = 12 + (i % 4) * 3;
+        
+        let dayOffset = 0;
+        let hourOffset = 12;
+
+        if (targetPhase === '16avos') {
+          // Official FIFA 2026 Round of 32 Schedule offsets:
+          // Sunday, June 28 (Day 0): Match 73 (Index 2)
+          // Monday, June 29 (Day 1): Matches 74, 75, 76 (Indexes 0, 3, 4)
+          // Tuesday, June 30 (Day 2): Matches 77, 78, 79 (Indexes 1, 5, 6)
+          // Wednesday, July 1 (Day 3): Matches 80, 81, 82 (Indexes 7, 10, 11)
+          // Thursday, July 2 (Day 4): Matches 83, 84, 85 (Indexes 8, 9, 14)
+          // Friday, July 3 (Day 5): Matches 86, 87, 88 (Indexes 12, 15, 13)
+          const offsetMap: { [key: number]: { day: number; hour: number } } = {
+            0: { day: 1, hour: 13 },  // M74
+            1: { day: 2, hour: 13 },  // M77
+            2: { day: 0, hour: 16 },  // M73
+            3: { day: 1, hour: 17 },  // M75
+            4: { day: 1, hour: 21 },  // M76
+            5: { day: 2, hour: 17 },  // M78
+            6: { day: 2, hour: 21 },  // M79
+            7: { day: 3, hour: 13 },  // M80
+            8: { day: 4, hour: 13 },  // M83
+            9: { day: 4, hour: 17 },  // M84
+            10: { day: 3, hour: 17 }, // M81
+            11: { day: 3, hour: 21 }, // M82
+            12: { day: 5, hour: 13 }, // M86
+            13: { day: 5, hour: 17 }, // M88
+            14: { day: 4, hour: 21 }, // M85
+            15: { day: 5, hour: 21 }  // M87
+          };
+          const offsets = offsetMap[i] || { day: Math.floor(i / 4), hour: 12 + (i % 4) * 3 };
+          dayOffset = offsets.day;
+          hourOffset = offsets.hour;
+        } else {
+          dayOffset = Math.floor(i / 4);
+          hourOffset = 12 + (i % 4) * 3;
+        }
         
         const dateObj = new Date(baseStartMillis);
         dateObj.setDate(dateObj.getDate() + dayOffset);
