@@ -18,7 +18,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == "darigles1@gmail.com" ||
+        request.auth.token.email.matches('(?i)^darigles1@gmail\\.com$') ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -123,6 +123,12 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, list: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    // Phase enablement collection (fases)
+    match /fases/{phaseId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }
