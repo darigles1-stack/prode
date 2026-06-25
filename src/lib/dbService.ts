@@ -1613,6 +1613,10 @@ export const dbService = {
           const assignedThirdsSet = new Set<string>();
 
           const getBestThirdOf = (groups: string[]): string => {
+            if (pendingCount > 0) {
+              const groupLetters = groups.map(g => g.replace("Grupo ", "")).join("/");
+              return `Mejor 3° Grupo ${groupLetters} 🏆`;
+            }
             const found = bestThirdsOverall.find(t => 
               groups.includes(t.group) && 
               !assignedThirdsSet.has(t.clean) &&
