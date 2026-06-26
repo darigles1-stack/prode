@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Trophy, Medal, SearchX, Sparkles, Star, CheckCircle2, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react';
 import { Standing, UserProfile, SoccerMatch, UserForecast } from '../types';
+import MessiSpinner from './MessiSpinner';
 
 interface LeaderboardProps {
   standings: Standing[];
@@ -516,21 +517,7 @@ Kit de aliento:
 
          {/* Standings Table */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-16 text-center min-h-[350px] space-y-4">
-            {/* Elegant spinning orbit */}
-            <div className="relative flex items-center justify-center w-16 h-16 select-none">
-              <div className="absolute w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shadow-inner">
-                <Trophy className="h-5 w-5 text-blue-600 animate-pulse" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h4 className="font-extrabold text-slate-800 text-sm">Calculando Posiciones...</h4>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                Procesando pronósticos y actualizando el ranking en tiempo real.
-              </p>
-            </div>
-          </div>
+          <MessiSpinner text="Calculando Posiciones..." />
         ) : filteredStandings.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
