@@ -466,6 +466,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }, 1000);
   };
 
+  const downloadCSV = (matchesList: any[], fileName: string) => {
+    const headers = ["Número", "Local", "Visitante", "Fecha", "Hora (ARG)"];
+    
+    const sorted = [...matchesList].sort((a, b) => {
+      const parseNum = (idStr: string) => {
+        const m = idStr.match(/(\d+)$/);
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const numA = parseNum(a.id);
+      const numB = parseNum(b.id);
+      if (numA !== null && numB !== null) return numA - numB;
+      return (a.matchDate || '').localeCompare(b.matchDate || '');
+    });
+
+    const rows = sorted.map((m, idx) => {
+      const date = new Date(m.matchDate);
+      const dateString = date.toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const timeString = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      const cleanHome = m.homeTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+      const cleanAway = m.awayTeam.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+
+      return [
+        idx + 1,
+        `"${cleanHome}"`,
+        `"${cleanAway}"`,
+        `"${dateString}"`,
+        `"${timeString}"`
+      ];
+    });
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', url);
+    downloadAnchor.setAttribute('download', fileName);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    setTimeout(() => {
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
   const copyToClipboard = async (data: any, key: string) => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -1127,9 +1173,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   type="button"
                   onClick={() => downloadJSON(matches.filter(m => m.phase === '16avos'), '16avos_final_partidos.json')}
                   className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                  title="Descargar en formato JSON"
                 >
                   <Download className="h-3 w-3 shrink-0" />
-                  Bajar
+                  Bajar JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadCSV(matches.filter(m => m.phase === '16avos'), '16avos_final_partidos_fechas.csv')}
+                  className="flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-extrabold py-1.5 px-2.5 rounded-lg text-[10px] transition-all cursor-pointer"
+                  title="Descargar en formato CSV legible por Excel"
+                >
+                  <Download className="h-3 w-3 shrink-0" />
+                  Bajar CSV
                 </button>
               </div>
             </div>

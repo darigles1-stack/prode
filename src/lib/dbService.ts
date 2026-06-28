@@ -1680,42 +1680,11 @@ export const dbService = {
         }
       }
 
-      // Safe date calculation to guarantee no NaN values
-      let lastSourceMatchDate = Date.now();
-      const prevPhase = targetPhase === '16avos' ? 'grupos' : (targetPhase === '8vos' ? '16avos' : (targetPhase === 'cuartos' ? '8vos' : (targetPhase === 'semis' ? 'cuartos' : 'semis')));
-      try {
-        const times = currentMatches
-          .filter(m => m.phase === prevPhase && m.matchDate)
-          .map(m => {
-            let t = Date.now();
-            if (typeof m.matchDate === 'string') {
-              t = new Date(m.matchDate).getTime();
-            } else if (m.matchDate && typeof (m.matchDate as any).toDate === 'function') {
-              t = (m.matchDate as any).toDate().getTime();
-            } else if (m.matchDate && (m.matchDate as any).seconds !== undefined) {
-              t = (m.matchDate as any).seconds * 1000;
-            } else {
-              t = new Date(m.matchDate as any).getTime();
-            }
-            return isNaN(t) ? Date.now() : t;
-          });
-        if (times.length > 0) {
-          lastSourceMatchDate = Math.max(...times);
-        }
-      } catch (err) {
-        console.error("Error calculating lastSourceMatchDate safely:", err);
-      }
-
-      const baseStartMillis = lastSourceMatchDate > Date.now()
-        ? lastSourceMatchDate + 1000 * 60 * 60 * 24
-        : Date.now() + 1000 * 60 * 60 * 24;
-
       let createdCounter = 0;
       for (let i = 0; i < pairings.length; i++) {
         const pair = pairings[i];
         
-        let dayOffset = 0;
-        let hourOffset = 12;
+        let dateObj: Date;
 
         if (targetPhase === '16avos') {
           // Official FIFA 2026 Round of 32 Schedule offsets:
@@ -1726,55 +1695,51 @@ export const dbService = {
           // Thursday, July 2 (Day 4): Matches 83, 84, 85 (Indexes 8, 9, 14)
           // Friday, July 3 (Day 5): Matches 86, 87, 88 (Indexes 12, 15, 13)
           const offsetMap: { [key: number]: { day: number; hour: number } } = {
-            0: { day: 1, hour: 13 },  // M74
-            1: { day: 2, hour: 13 },  // M77
-            2: { day: 0, hour: 16 },  // M73
-            3: { day: 1, hour: 17 },  // M75
-            4: { day: 1, hour: 21 },  // M76
-            5: { day: 2, hour: 17 },  // M78
-            6: { day: 2, hour: 21 },  // M79
-            7: { day: 3, hour: 13 },  // M80
-            8: { day: 4, hour: 13 },  // M83
-            9: { day: 4, hour: 17 },  // M84
-            10: { day: 3, hour: 17 }, // M81
-            11: { day: 3, hour: 21 }, // M82
-            12: { day: 5, hour: 13 }, // M86
-            13: { day: 5, hour: 17 }, // M88
-            14: { day: 4, hour: 21 }, // M85
-            15: { day: 5, hour: 21 }  // M87
+            0: { day: 1, hour: 13 },  // M74 (29/Jun 13:00)
+            1: { day: 2, hour: 13 },  // M77 (30/Jun 13:00)
+            2: { day: 0, hour: 16 },  // M73 (28/Jun 16:00)
+            3: { day: 1, hour: 17 },  // M75 (29/Jun 17:00)
+            4: { day: 1, hour: 21 },  // M76 (29/Jun 21:00)
+            5: { day: 2, hour: 17 },  // M78 (30/Jun 17:00)
+            6: { day: 2, hour: 21 },  // M79 (30/Jun 21:00)
+            7: { day: 3, hour: 13 },  // M80 (01/Jul 13:00)
+            8: { day: 4, hour: 13 },  // M83 (02/Jul 13:00)
+            9: { day: 4, hour: 17 },  // M84 (02/Jul 17:00)
+            10: { day: 3, hour: 17 }, // M81 (01/Jul 17:00)
+            11: { day: 3, hour: 21 }, // M82 (01/Jul 21:00)
+            12: { day: 5, hour: 13 }, // M86 (03/Jul 13:00)
+            13: { day: 5, hour: 17 }, // M88 (03/Jul 17:00)
+            14: { day: 4, hour: 21 }, // M85 (02/Jul 21:00)
+            15: { day: 5, hour: 21 }  // M87 (03/Jul 21:00)
           };
           const offsets = offsetMap[i] || { day: Math.floor(i / 4), hour: 12 + (i % 4) * 3 };
-          dayOffset = offsets.day;
-          hourOffset = offsets.hour;
+          // June is 5 (0-indexed)
+          dateObj = new Date(2026, 5, 28 + offsets.day, offsets.hour, 0, 0, 0);
         } else if (targetPhase === '8vos') {
           // Saturday, July 4 (Day 0) to Tuesday, July 7 (Day 3). 2 matches per day.
-          dayOffset = Math.floor(i / 2);
-          hourOffset = i % 2 === 0 ? 15 : 19; // Spaced 15:00 and 19:00 Argentina time
+          const dayOffset = Math.floor(i / 2);
+          const hourOffset = i % 2 === 0 ? 15 : 19; // Spaced 15:00 and 19:00 Argentina time
+          // July is 6 (0-indexed)
+          dateObj = new Date(2026, 6, 4 + dayOffset, hourOffset, 0, 0, 0);
         } else if (targetPhase === 'cuartos') {
           // Thursday, July 9 (Day 0) to Sunday, July 12 (Day 3). 1 match per day.
-          // Note: July 8 is a rest day, so baseStartMillis (which is July 7 + 1 = July 8) needs +1 day.
-          dayOffset = i + 1; // July 9 is Day 1 from July 8 base
-          hourOffset = 18; // 18:00 Argentina time
+          const dayOffset = i;
+          const hourOffset = 18; // 18:00 Argentina time
+          // July is 6 (0-indexed)
+          dateObj = new Date(2026, 6, 9 + dayOffset, hourOffset, 0, 0, 0);
         } else if (targetPhase === 'semis') {
           // Tuesday, July 14 (Day 0) to Wednesday, July 15 (Day 1). 1 match per day.
-          // Note: July 13 is a rest day. Last match of cuartos is July 12.
-          // baseStartMillis (July 12 + 1 = July 13).
-          dayOffset = i + 1; // July 14 is Day 1 from July 13 base
-          hourOffset = 21; // 21:00 Argentina time
+          const dayOffset = i;
+          const hourOffset = 21; // 21:00 Argentina time
+          // July is 6 (0-indexed)
+          dateObj = new Date(2026, 6, 14 + dayOffset, hourOffset, 0, 0, 0);
         } else if (targetPhase === 'final') {
           // Sunday, July 19.
-          // Note: Semis end on July 15. baseStartMillis is July 15 + 1 = July 16.
-          // July 19 is Day 3 from July 16 base.
-          dayOffset = 3;
-          hourOffset = 16; // 16:00 Argentina time
+          // July is 6 (0-indexed)
+          dateObj = new Date(2026, 6, 19, 16, 0, 0, 0); // 16:00 Argentina time
         } else {
-          dayOffset = Math.floor(i / 4);
-          hourOffset = 12 + (i % 4) * 3;
+          dateObj = new Date(2026, 5, 28 + Math.floor(i / 4), 12 + (i % 4) * 3, 0, 0, 0);
         }
-        
-        const dateObj = new Date(baseStartMillis);
-        dateObj.setDate(dateObj.getDate() + dayOffset);
-        dateObj.setHours(hourOffset, 0, 0, 0);
 
         // Reuse existing match ID if available at index i to preserve user predictions!
         const existingMatch = existingMatchesOfPhase[i];
