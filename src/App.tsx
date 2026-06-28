@@ -98,6 +98,7 @@ export default function App() {
 
   // Page Controls
   const [activeTab, setActiveTab] = useState<'matches' | 'fixture-completo' | 'posiciones-copas' | 'standings' | 'prode-general' | 'prizes' | 'admin'>('matches');
+  const [positionsSubTab, setPositionsSubTab] = useState<'grupos' | 'llaves'>('grupos');
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -682,7 +683,7 @@ export default function App() {
                       </div>
                       <div>
                         <div className="text-[9px] font-extrabold text-blue-300 tracking-wider uppercase leading-none">Mi Desempeño Oficial</div>
-                        <div className="text-xs font-black text-white flex items-center gap-1.5 mt-0.5">
+                        <div className="text-xs font-black text-white flex items-center gap-1.5 mt-0.5 font-sans">
                           <span className="truncate max-w-[130px]">{currentUser.name || 'Mi Cuenta'}</span>
                           {userRank && (
                             <span className="text-[9px] bg-emerald-500/25 text-emerald-300 font-extrabold px-1.5 py-0.5 rounded-md border border-emerald-500/35">
@@ -690,6 +691,18 @@ export default function App() {
                             </span>
                           )}
                         </div>
+                        {/* Shortcut button to positions/bracket */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('posiciones-copas');
+                            setPositionsSubTab('llaves');
+                          }}
+                          className="mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-blue-950 text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-md select-none border border-amber-300 hover:scale-102 active:scale-98"
+                        >
+                          <Trophy className="h-3.5 w-3.5 shrink-0" />
+                          <span>Ver Llaves y Copas 🏆</span>
+                        </button>
                       </div>
                     </div>
 
@@ -817,7 +830,10 @@ export default function App() {
                 <button
                   type="button"
                   id="tab-posiciones-copas"
-                  onClick={() => setActiveTab('posiciones-copas')}
+                  onClick={() => {
+                    setActiveTab('posiciones-copas');
+                    setPositionsSubTab('grupos');
+                  }}
                   className={`flex items-center gap-1.5 py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-xl transition-all relative cursor-pointer select-none ${
                     activeTab === 'posiciones-copas' 
                       ? 'bg-blue-50/85 text-blue-900 border-b-2 border-blue-700 shadow-sm font-extrabold' 
@@ -911,7 +927,7 @@ export default function App() {
                 )}
 
                 {activeTab === 'posiciones-copas' && (
-                  <PosicionesYCopas matches={matches} />
+                  <PosicionesYCopas matches={matches} initialSubTab={positionsSubTab} />
                 )}
 
                 {activeTab === 'standings' && (

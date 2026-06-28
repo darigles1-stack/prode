@@ -2,13 +2,22 @@ import React, { useState, useMemo } from 'react';
 import { Trophy, Calendar, Sparkles, Sliders, ChevronRight, HelpCircle, GitCommit } from 'lucide-react';
 import { SoccerMatch } from '../types';
 import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry, getCountryCode } from '../lib/worldCupData';
+// @ts-ignore
+import copaImg from '../assets/images/copa3.png';
 
 interface PosicionesYCopasProps {
   matches: SoccerMatch[];
+  initialSubTab?: 'grupos' | 'llaves';
 }
 
-export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches }) => {
-  const [subTab, setSubTab] = useState<'grupos' | 'llaves'>('grupos');
+export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, initialSubTab = 'grupos' }) => {
+  const [subTab, setSubTab] = useState<'grupos' | 'llaves'>(initialSubTab);
+
+  React.useEffect(() => {
+    if (initialSubTab) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
 
   // --- 1. DYNAMIC GROUP STANDING CALCULATIONS ---
@@ -183,6 +192,157 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches }) =
     "Grupo A", "Grupo B", "Grupo C", "Grupo D", "Grupo E", "Grupo F",
     "Grupo G", "Grupo H", "Grupo I", "Grupo J", "Grupo K", "Grupo L"
   ];
+
+  const groupColors: Record<string, string> = {
+    "Grupo A": "border-emerald-500/30 text-emerald-400 bg-emerald-950/20",
+    "Grupo B": "border-pink-500/30 text-pink-400 bg-pink-950/20",
+    "Grupo C": "border-amber-500/30 text-amber-400 bg-amber-950/20",
+    "Grupo D": "border-indigo-500/30 text-indigo-400 bg-indigo-950/20",
+    "Grupo E": "border-orange-500/30 text-orange-400 bg-orange-950/20",
+    "Grupo F": "border-lime-500/30 text-lime-400 bg-lime-950/20",
+    "Grupo G": "border-rose-500/30 text-rose-400 bg-rose-950/20",
+    "Grupo H": "border-cyan-500/30 text-cyan-400 bg-cyan-950/20",
+    "Grupo I": "border-purple-500/30 text-purple-400 bg-purple-950/20",
+    "Grupo J": "border-teal-500/30 text-teal-400 bg-teal-950/20",
+    "Grupo K": "border-yellow-500/30 text-yellow-400 bg-yellow-950/20",
+    "Grupo L": "border-sky-500/30 text-sky-400 bg-sky-950/20"
+  };
+
+  const renderGroupCardMin = (gName: string) => {
+    const teams = groupStandings[gName] || [];
+    return (
+      <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-1.5 flex flex-col items-center gap-1 shadow-md w-[70px] select-none hover:border-zinc-700 transition-all">
+        <div className="grid grid-cols-2 gap-1 bg-black/40 p-1 rounded-lg border border-zinc-900 w-[46px] h-[46px] items-center justify-center">
+          {teams.slice(0, 4).map((t, idx) => {
+            const code = getCountryCode(t.team);
+            return code ? (
+              <img 
+                key={idx}
+                src={`/flags/${code}.svg`} 
+                alt={t.team} 
+                className="w-3.5 h-3.5 rounded-full object-cover shadow-sm"
+              />
+            ) : (
+              <span key={idx} className="text-[10px] leading-none">{t.flag || '🏳️'}</span>
+            );
+          })}
+          {Array.from({ length: Math.max(0, 4 - teams.length) }).map((_, idx) => (
+            <span key={`empty-${idx}`} className="text-[10px] leading-none">🏳️</span>
+          ))}
+        </div>
+        <span className={`text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded-full border leading-none ${groupColors[gName]}`}>
+          {gName.replace("Grupo ", "GRP ")}
+        </span>
+      </div>
+    );
+  };
+
+  const renderBracketMatchCard = (match: SoccerMatch | undefined, slotLabel: string, acceptsLabel: string) => {
+    if (!match) {
+      return (
+        <div className="bg-zinc-950/30 border border-dashed border-zinc-800/60 rounded-xl p-2 w-[165px] text-center opacity-50 shadow-sm flex flex-col items-center justify-center h-[62px]">
+          <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-0.5">{slotLabel}</span>
+          <span className="text-[8px] text-zinc-600 font-bold truncate max-w-full px-1">{acceptsLabel}</span>
+        </div>
+      );
+    }
+
+    const isFinished = match.status === 'finished';
+    const isHomeWinner = isFinished && (match.homeScore ?? 0) > (match.awayScore ?? 0);
+    const isAwayWinner = isFinished && (match.awayScore ?? 0) > (match.homeScore ?? 0);
+
+    const homeInfo = getKnockoutTeamInfo(match.homeTeam);
+    const awayInfo = getKnockoutTeamInfo(match.awayTeam);
+
+    const dateFormatted = match.matchDate ? (() => {
+      try {
+        const d = new Date(match.matchDate);
+        return d.toLocaleDateString('es-AR', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) + ' hs';
+      } catch (e) {
+        return '';
+      }
+    })() : '';
+
+    return (
+      <div className={`bg-zinc-955/80 border bg-zinc-950 border-zinc-800/80 rounded-xl overflow-hidden shadow-md w-[165px] select-none hover:border-zinc-700 transition-all relative ${
+        isFinished ? 'border-zinc-800/80' : 'border-blue-950/60 ring-1 ring-blue-500/5'
+      }`}>
+        <div className="px-2 py-0.5 text-[7.5px] font-black text-zinc-500 font-mono tracking-wider border-b border-zinc-900 flex justify-between bg-zinc-950 bg-opacity-60">
+          <span>{slotLabel}</span>
+          <span>{dateFormatted}</span>
+        </div>
+
+        <div className="px-2 py-1 flex items-center justify-between border-b border-zinc-900/30">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {!homeInfo.isPlaceholder && homeInfo.code ? (
+              <img 
+                src={`/flags/${homeInfo.code}.svg`} 
+                alt={homeInfo.name} 
+                className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <span className="text-[10px] shrink-0 leading-none">{homeInfo.flag}</span>
+            )}
+            <span className={`text-[10px] truncate leading-none ${
+              isFinished 
+                ? isHomeWinner 
+                  ? 'font-black text-white' 
+                  : 'text-zinc-500 font-medium' 
+                : 'font-bold text-zinc-300'
+            }`}>
+              {homeInfo.name}
+            </span>
+          </div>
+          <span className={`text-[10px] font-black font-mono px-1 rounded text-center min-w-4 shrink-0 leading-none py-0.5 ${
+            isFinished 
+              ? isHomeWinner 
+                ? 'bg-emerald-950/50 text-emerald-400' 
+                : 'bg-zinc-900/60 text-zinc-600' 
+              : 'bg-zinc-900/20 text-zinc-500'
+          }`}>
+            {match.homeScore !== null ? match.homeScore : '-'}
+          </span>
+        </div>
+
+        <div className="px-2 py-1 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {!awayInfo.isPlaceholder && awayInfo.code ? (
+              <img 
+                src={`/flags/${awayInfo.code}.svg`} 
+                alt={awayInfo.name} 
+                className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <span className="text-[10px] shrink-0 leading-none">{awayInfo.flag}</span>
+            )}
+            <span className={`text-[10px] truncate leading-none ${
+              isFinished 
+                ? isAwayWinner 
+                  ? 'font-black text-white' 
+                  : 'text-zinc-500 font-medium' 
+                : 'font-bold text-zinc-300'
+            }`}>
+              {awayInfo.name}
+            </span>
+          </div>
+          <span className={`text-[10px] font-black font-mono px-1 rounded text-center min-w-4 shrink-0 leading-none py-0.5 ${
+            isFinished 
+              ? isAwayWinner 
+                ? 'bg-emerald-950/50 text-emerald-400' 
+                : 'bg-zinc-900/60 text-zinc-600' 
+              : 'bg-zinc-900/20 text-zinc-500'
+          }`}>
+            {match.awayScore !== null ? match.awayScore : '-'}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div id="posiciones-y-copas-tab" className="space-y-6">
@@ -396,90 +556,146 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches }) =
           </div>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Quick HUD guide for brackets */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 font-sans">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3 font-sans text-white">
             <div className="flex items-center gap-2.5">
-              <Trophy className="h-5 w-5 text-amber-500 shrink-0" />
+              <Trophy className="h-5 w-5 text-amber-400 shrink-0" />
               <div>
-                <span className="text-xs font-extrabold text-slate-800 block">Camino al Cetro Mundialista</span>
-                <span className="text-[10.5px] text-slate-500">
-                  Las series son de eliminación directa. El ganador avanza de ronda y el perdedor queda descalificado.
+                <span className="text-xs font-black text-amber-300 block">Fase Eliminatoria - Camino a la Gloria 🏆</span>
+                <span className="text-[10.5px] text-slate-400">
+                  Visualización oficial simétrica del fixture. Deslizá lateralmente para ver el cuadro completo.
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-[10.5px] font-bold text-slate-600 shrink-0">
+            <div className="flex items-center gap-4 text-[10.5px] font-bold text-slate-400 shrink-0">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full inline-block"></span> Finalizado
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 bg-amber-500 rounded-full inline-block animate-pulse"></span> Pendiente / En Curso
+                <span className="w-2.5 h-2.5 bg-amber-500 rounded-full inline-block animate-pulse"></span> Activo / En Curso
               </span>
             </div>
           </div>
 
-          {/* Mobile swiping tip layout helper banner */}
-          <div className="sm:hidden bg-blue-50 border border-blue-200/60 rounded-xl p-3 text-center text-[11px] font-extrabold text-blue-900 animate-pulse flex items-center justify-center gap-1.5 shadow-sm">
-            <span>📱 Deslizá la pantalla o girá el celular hacia la derecha para ver los Octavos, Cuartos y Semis 👉</span>
-          </div>
-
-          {/* BRACKET TIMELINE COLUMNS (Desktops scrollable horizontal grid layout represents the binary tree beautifully) */}
-          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            <div className="flex gap-6 min-w-[1240px] px-2 items-stretch font-sans">
+          {/* Symmetrical visual bracket container */}
+          <div className="overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent rounded-3xl border border-zinc-800 bg-[#060606] shadow-2xl p-6">
+            <div className="min-w-[1950px] flex items-center justify-between gap-4 py-8 relative">
               
-              {/* PHASE COLUMN: 16avos */}
-              <div className="flex-1 space-y-4">
-                <div className="bg-slate-900 text-white rounded-xl py-2 px-3 text-center border border-slate-800 shadow-sm shrink-0">
-                  <span className="text-[11px] font-black uppercase tracking-wider block">16avos de Final</span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">16 llaves (32 países)</span>
+              {/* --- LEFT HAND BRANCH --- */}
+
+              {/* Column 1: Groups A-F */}
+              <div className="flex flex-col justify-between h-[750px] w-[75px] shrink-0">
+                {renderGroupCardMin("Grupo A")}
+                {renderGroupCardMin("Grupo B")}
+                {renderGroupCardMin("Grupo C")}
+                {renderGroupCardMin("Grupo D")}
+                {renderGroupCardMin("Grupo E")}
+                {renderGroupCardMin("Grupo F")}
+              </div>
+
+              {/* Column 2: 16avos - Left (8 Matches) */}
+              <div className="flex flex-col justify-between h-[750px] w-[170px] shrink-0">
+                {renderBracketMatchCard(knockoutPhases['16avos'][0], "16avos M74", "1E vs 3ABCDF")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][1], "16avos M77", "1I vs 3CDFGH")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][2], "16avos M73", "2A vs 2B")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][3], "16avos M75", "1F vs 2C")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][4], "16avos M76", "1C vs 2F")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][5], "16avos M78", "2E vs 2I")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][6], "16avos M79", "1A vs 3CEFHI")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][7], "16avos M80", "1L vs 3EHIJK")}
+              </div>
+
+              {/* Column 3: 8vos - Left (4 Matches) */}
+              <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-6">
+                {renderBracketMatchCard(knockoutPhases['8vos'][0], "8vos M89", "Ganador M74 vs M77")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][1], "8vos M90", "Ganador M73 vs M75")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][2], "8vos M91", "Ganador M76 vs M78")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][3], "8vos M92", "Ganador M79 vs M80")}
+              </div>
+
+              {/* Column 4: Cuartos - Left (2 Matches) */}
+              <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-16">
+                {renderBracketMatchCard(knockoutPhases['cuartos'][0], "Cuartos M97", "Ganador M89 vs M90")}
+                {renderBracketMatchCard(knockoutPhases['cuartos'][1], "Cuartos M98", "Ganador M91 vs M92")}
+              </div>
+
+              {/* Column 5: Semis - Left (1 Match) */}
+              <div className="flex flex-col justify-center h-[750px] w-[170px] shrink-0">
+                {renderBracketMatchCard(knockoutPhases['semis'][0], "Semi M101", "Ganador M97 vs M98")}
+              </div>
+
+
+              {/* --- CENTRAL PORTION (WORLD CHAMPIONS & TROPHY) --- */}
+
+              <div className="flex flex-col justify-center items-center h-[750px] w-[260px] shrink-0 select-none text-center gap-6">
+                <div className="text-zinc-500 font-mono text-[10px] uppercase font-black tracking-widest">WORLD CHAMPIONS</div>
+                
+                {/* FIFA Trophy Container with gold radial glow using copaImg */}
+                 <div className="relative flex items-center justify-center py-2">
+                   <img 
+                     src={copaImg} 
+                     alt="Copa del Mundo" 
+                     className="w-28 h-36 object-contain drop-shadow-[0_0_35px_rgba(251,191,36,0.4)]"
+                   />
+                   <div className="absolute -inset-4 bg-amber-400/5 rounded-full blur-2xl -z-10 animate-pulse"></div>
+                 </div>
+
+                <div className="text-zinc-400 font-mono text-[9px] uppercase tracking-widest">BRONZE WINNER</div>
+                
+                {/* Gran Final Card */}
+                <div className="w-full flex justify-center">
+                  {renderBracketMatchCard(knockoutPhases['final'][0], "GRAN FINAL", "Ganador Semifinales")}
                 </div>
-                <div className="space-y-3">
-                  {renderPhaseMatches(knockoutPhases['16avos'], '16avos')}
+
+                <div className="mt-4 flex flex-col items-center gap-1">
+                  <span className="text-[12px] font-black tracking-[0.2em] text-amber-500/80 uppercase font-mono">2026</span>
+                  <span className="text-[9px] font-black tracking-widest text-zinc-600 uppercase font-mono">FIFA WORLD CUP</span>
                 </div>
               </div>
 
-              {/* PHASE COLUMN: 8vos */}
-              <div className="flex-1 space-y-4 flex flex-col justify-around">
-                <div className="bg-slate-900 text-white rounded-xl py-2 px-3 text-center border border-slate-800 shadow-sm shrink-0">
-                  <span className="text-[11px] font-black uppercase tracking-wider block">8vos de Final</span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">8 llaves</span>
-                </div>
-                <div className="space-y-12 py-6 flex-1 flex flex-col justify-around">
-                  {renderPhaseMatches(knockoutPhases['8vos'], '8vos')}
-                </div>
+
+              {/* --- RIGHT HAND BRANCH --- */}
+
+              {/* Column 7: Semis - Right (1 Match) */}
+              <div className="flex flex-col justify-center h-[750px] w-[170px] shrink-0">
+                {renderBracketMatchCard(knockoutPhases['semis'][1], "Semi M102", "Ganador M99 vs M100")}
               </div>
 
-              {/* PHASE COLUMN: Cuartos */}
-              <div className="flex-1 space-y-4 flex flex-col justify-around">
-                <div className="bg-slate-900 text-white rounded-xl py-2 px-3 text-center border border-slate-800 shadow-sm shrink-0">
-                  <span className="text-[11px] font-black uppercase tracking-wider block">Cuartos de Final</span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">4 llaves</span>
-                </div>
-                <div className="space-y-24 py-12 flex-1 flex flex-col justify-around">
-                  {renderPhaseMatches(knockoutPhases['cuartos'], 'cuartos')}
-                </div>
+              {/* Column 8: Cuartos - Right (2 Matches) */}
+              <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-16">
+                {renderBracketMatchCard(knockoutPhases['cuartos'][2], "Cuartos M99", "Ganador M93 vs M94")}
+                {renderBracketMatchCard(knockoutPhases['cuartos'][3], "Cuartos M100", "Ganador M95 vs M96")}
               </div>
 
-              {/* PHASE COLUMN: Semis */}
-              <div className="flex-1 space-y-4 flex flex-col justify-around">
-                <div className="bg-slate-900 text-white rounded-xl py-2 px-3 text-center border border-slate-800 shadow-sm shrink-0">
-                  <span className="text-[11px] font-black uppercase tracking-wider block">Semifinales</span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">2 llaves</span>
-                </div>
-                <div className="space-y-40 py-24 flex-1 flex flex-col justify-around font-sans">
-                  {renderPhaseMatches(knockoutPhases['semis'], 'semis')}
-                </div>
+              {/* Column 9: 8vos - Right (4 Matches) */}
+              <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-6">
+                {renderBracketMatchCard(knockoutPhases['8vos'][4], "8vos M93", "Ganador M83 vs M84")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][5], "8vos M94", "Ganador M81 vs M82")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][6], "8vos M95", "Ganador M86 vs M88")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][7], "8vos M96", "Ganador M85 vs M87")}
               </div>
 
-              {/* PHASE COLUMN: GRAN FINAL */}
-              <div className="flex-1 space-y-4 flex flex-col justify-center">
-                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl py-2.5 px-3 text-center border border-amber-300 shadow bg-size tracking-wide shrink-0">
-                  <span className="text-[11px] font-black uppercase tracking-widest block">¡GRAN FINAL DE COPA! 🏆</span>
-                  <span className="text-[9px] font-extrabold text-slate-900 uppercase">Campeón Mundial 🗺️</span>
-                </div>
-                <div className="py-24 flex-1 flex flex-col justify-center">
-                  {renderPhaseMatches(knockoutPhases['final'], 'final', true)}
-                </div>
+              {/* Column 10: 16avos - Right (8 Matches) */}
+              <div className="flex flex-col justify-between h-[750px] w-[170px] shrink-0">
+                {renderBracketMatchCard(knockoutPhases['16avos'][8], "16avos M83", "2K vs 2L")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][9], "16avos M84", "1H vs 2J")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][10], "16avos M81", "1D vs 3BEFIJ")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][11], "16avos M82", "1G vs 3AEHIJ")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][12], "16avos M86", "1J vs 2H")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][13], "16avos M88", "2D vs 2G")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][14], "16avos M85", "1B vs 3EFGIJ")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][15], "16avos M87", "1K vs 3DEIJL")}
+              </div>
+
+              {/* Column 11: Groups G-L */}
+              <div className="flex flex-col justify-between h-[750px] w-[75px] shrink-0">
+                {renderGroupCardMin("Grupo G")}
+                {renderGroupCardMin("Grupo H")}
+                {renderGroupCardMin("Grupo I")}
+                {renderGroupCardMin("Grupo J")}
+                {renderGroupCardMin("Grupo K")}
+                {renderGroupCardMin("Grupo L")}
               </div>
 
             </div>
@@ -511,203 +727,3 @@ function getKnockoutTeamInfo(teamName: string) {
   return { name: clean, flag, code, isPlaceholder: false };
 }
 
-function renderPhaseMatches(matchList: SoccerMatch[], phaseKey: string, isGrandFinal = false) {
-  if (matchList.length === 0) {
-    const defaultCounts: Record<string, number> = {
-      '16avos': 16,
-      '8vos': 8,
-      'cuartos': 4,
-      'semis': 2,
-      'final': 1
-    };
-    const count = defaultCounts[phaseKey] || 1;
-    return Array.from({ length: count }).map((_, i) => (
-      <div 
-        key={`placeholder_col_${phaseKey}_${i}`} 
-        className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-3 text-center opacity-60 font-sans shadow-sm"
-      >
-        <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
-          Llave {i + 1} ({phaseKey.toUpperCase()})
-        </span>
-        <div className="text-[10px] text-slate-400 italic">Pendiente de Generación</div>
-      </div>
-    ));
-  }
-
-  return matchList.map((match, idx) => {
-    const isFinished = match.status === 'finished';
-    const isHomeWinner = isFinished && (match.homeScore ?? 0) > (match.awayScore ?? 0);
-    const isAwayWinner = isFinished && (match.awayScore ?? 0) > (match.homeScore ?? 0);
-
-    const homeInfo = getKnockoutTeamInfo(match.homeTeam);
-    const awayInfo = getKnockoutTeamInfo(match.awayTeam);
-
-    const matchDateFormatted = match.matchDate ? (() => {
-      try {
-        const d = new Date(match.matchDate);
-        return d.toLocaleDateString('es-AR', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) + ' hs';
-      } catch (e) {
-        return '';
-      }
-    })() : '';
-
-    return (
-      <div 
-        key={match.id} 
-        className={`bg-white border text-left rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all relative font-sans ${
-          isGrandFinal 
-            ? 'border-amber-400 ring-2 ring-amber-400/25 bg-amber-50/10' 
-            : isFinished 
-              ? 'border-slate-200' 
-              : 'border-blue-200 ring-1 ring-blue-500/10'
-        }`}
-      >
-        {/* Top bar with match series index & dates */}
-        <div className={`px-2.5 py-1 text-[9px] font-bold font-mono uppercase tracking-wider flex items-center justify-between border-b ${
-          isGrandFinal 
-            ? 'bg-amber-100 text-amber-950 border-amber-200' 
-            : 'bg-slate-50 text-slate-500 border-slate-100'
-        }`}>
-          <span>
-            {isGrandFinal ? '👑 MATCH DE CAMPEONATO' : `${phaseKey.toUpperCase()} - LLAVE ${idx + 1}`}
-          </span>
-          <span className="text-slate-400 text-[8.5px]">
-            {matchDateFormatted}
-          </span>
-        </div>
-
-        {/* Team 1/Home Row */}
-        <div className="px-2.5 py-2 flex items-center justify-between border-b border-slate-50">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              isFinished 
-                ? isHomeWinner 
-                  ? 'bg-emerald-500' 
-                  : 'bg-slate-300' 
-                : 'bg-amber-400 animate-pulse'
-            }`}></span>
-            
-            {/* Country Flag image */}
-            {!homeInfo.isPlaceholder && homeInfo.code ? (
-              <img 
-                src={`/flags/${homeInfo.code}.svg`} 
-                alt={homeInfo.name} 
-                title={homeInfo.name}
-                className="w-4 h-4 rounded-full shadow-sm select-none shrink-0 object-cover" 
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="text-[12px] select-none shrink-0" title={homeInfo.name}>
-                {homeInfo.flag}
-              </span>
-            )}
-
-            <span className={`text-[10px] truncate ${
-              isFinished 
-                ? isHomeWinner 
-                  ? 'font-black text-slate-900' 
-                  : 'text-slate-400' 
-                : 'font-semibold text-slate-700'
-            }`}>
-              {homeInfo.name}
-            </span>
-          </div>
-          {/* Score Box */}
-          <span className={`text-xs font-mono font-black py-0.5 px-1.5 rounded text-center min-w-5 shrink-0 ${
-            isFinished 
-              ? isHomeWinner 
-                ? 'bg-emerald-100 text-emerald-800' 
-                : 'bg-slate-100 text-slate-400' 
-              : 'bg-slate-50 text-slate-400'
-          }`}>
-            {match.homeScore !== null ? match.homeScore : '-'}
-          </span>
-        </div>
-
-        {/* Team 2/Away Row */}
-        <div className="px-2.5 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              isFinished 
-                ? isAwayWinner 
-                  ? 'bg-emerald-500' 
-                  : 'bg-slate-300' 
-                : 'bg-amber-400 animate-pulse'
-            }`}></span>
-
-            {/* Country Flag image */}
-            {!awayInfo.isPlaceholder && awayInfo.code ? (
-              <img 
-                src={`/flags/${awayInfo.code}.svg`} 
-                alt={awayInfo.name} 
-                title={awayInfo.name}
-                className="w-4 h-4 rounded-full shadow-sm select-none shrink-0 object-cover" 
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="text-[12px] select-none shrink-0" title={awayInfo.name}>
-                {awayInfo.flag}
-              </span>
-            )}
-
-            <span className={`text-[10px] truncate ${
-              isFinished 
-                ? isAwayWinner 
-                  ? 'font-black text-slate-900' 
-                  : 'text-slate-400' 
-                : 'font-semibold text-slate-700'
-            }`}>
-              {awayInfo.name}
-            </span>
-          </div>
-          {/* Score Box */}
-          <span className={`text-xs font-mono font-black py-0.5 px-1.5 rounded text-center min-w-5 shrink-0 ${
-            isFinished 
-              ? isAwayWinner 
-                ? 'bg-emerald-100 text-emerald-800' 
-                : 'bg-slate-100 text-slate-400' 
-              : 'bg-slate-50 text-slate-400'
-          }`}>
-            {match.awayScore !== null ? match.awayScore : '-'}
-          </span>
-        </div>
-
-        {/* Winner Highlight line */}
-        {isFinished && (
-          <div className="bg-emerald-50 border-t border-slate-100 text-[8.5px] font-extrabold text-emerald-800 px-2.5 py-1 flex items-center gap-1.5">
-            <span className="lowercase">vencedor:</span>
-            {isHomeWinner ? (
-              !homeInfo.isPlaceholder && homeInfo.code ? (
-                <img 
-                  src={`/flags/${homeInfo.code}.svg`} 
-                  alt={homeInfo.name} 
-                  className="w-3.5 h-3.5 rounded-full select-none shrink-0 object-cover" 
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span>{homeInfo.flag}</span>
-              )
-            ) : (
-              !awayInfo.isPlaceholder && awayInfo.code ? (
-                <img 
-                  src={`/flags/${awayInfo.code}.svg`} 
-                  alt={awayInfo.name} 
-                  className="w-3.5 h-3.5 rounded-full select-none shrink-0 object-cover" 
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span>{awayInfo.flag}</span>
-              )
-            )}
-            <span>{isHomeWinner ? homeInfo.name : awayInfo.name} 🎉</span>
-          </div>
-        )}
-      </div>
-    );
-  });
-}
