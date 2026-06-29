@@ -600,24 +600,24 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, ini
                 {renderBracketMatchCard(knockoutPhases['16avos'][1], "16avos M77", "1I vs 3CDFGH")}
                 {renderBracketMatchCard(knockoutPhases['16avos'][2], "16avos M73", "2A vs 2B")}
                 {renderBracketMatchCard(knockoutPhases['16avos'][3], "16avos M75", "1F vs 2C")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][4], "16avos M76", "1C vs 2F")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][5], "16avos M78", "2E vs 2I")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][6], "16avos M79", "1A vs 3CEFHI")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][7], "16avos M80", "1L vs 3EHIJK")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][8], "16avos M83", "2K vs 2L")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][9], "16avos M84", "1H vs 2J")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][10], "16avos M81", "1D vs 3BEFIJ")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][11], "16avos M82", "1G vs 3AEHIJ")}
               </div>
 
               {/* Column 3: 8vos - Left (4 Matches) */}
               <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-6">
                 {renderBracketMatchCard(knockoutPhases['8vos'][0], "8vos M89", "Ganador M74 vs M77")}
                 {renderBracketMatchCard(knockoutPhases['8vos'][1], "8vos M90", "Ganador M73 vs M75")}
-                {renderBracketMatchCard(knockoutPhases['8vos'][2], "8vos M91", "Ganador M76 vs M78")}
-                {renderBracketMatchCard(knockoutPhases['8vos'][3], "8vos M92", "Ganador M79 vs M80")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][4], "8vos M93", "Ganador M83 vs M84")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][5], "8vos M94", "Ganador M81 vs M82")}
               </div>
 
               {/* Column 4: Cuartos - Left (2 Matches) */}
               <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-16">
                 {renderBracketMatchCard(knockoutPhases['cuartos'][0], "Cuartos M97", "Ganador M89 vs M90")}
-                {renderBracketMatchCard(knockoutPhases['cuartos'][1], "Cuartos M98", "Ganador M91 vs M92")}
+                {renderBracketMatchCard(knockoutPhases['cuartos'][2], "Cuartos M98", "Ganador M93 vs M94")}
               </div>
 
               {/* Column 5: Semis - Left (1 Match) */}
@@ -664,24 +664,24 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, ini
 
               {/* Column 8: Cuartos - Right (2 Matches) */}
               <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-16">
-                {renderBracketMatchCard(knockoutPhases['cuartos'][2], "Cuartos M99", "Ganador M93 vs M94")}
+                {renderBracketMatchCard(knockoutPhases['cuartos'][1], "Cuartos M99", "Ganador M91 vs M92")}
                 {renderBracketMatchCard(knockoutPhases['cuartos'][3], "Cuartos M100", "Ganador M95 vs M96")}
               </div>
 
               {/* Column 9: 8vos - Right (4 Matches) */}
               <div className="flex flex-col justify-around h-[750px] w-[170px] shrink-0 py-6">
-                {renderBracketMatchCard(knockoutPhases['8vos'][4], "8vos M93", "Ganador M83 vs M84")}
-                {renderBracketMatchCard(knockoutPhases['8vos'][5], "8vos M94", "Ganador M81 vs M82")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][2], "8vos M91", "Ganador M76 vs M78")}
+                {renderBracketMatchCard(knockoutPhases['8vos'][3], "8vos M92", "Ganador M79 vs M80")}
                 {renderBracketMatchCard(knockoutPhases['8vos'][6], "8vos M95", "Ganador M86 vs M88")}
                 {renderBracketMatchCard(knockoutPhases['8vos'][7], "8vos M96", "Ganador M85 vs M87")}
               </div>
 
               {/* Column 10: 16avos - Right (8 Matches) */}
               <div className="flex flex-col justify-between h-[750px] w-[170px] shrink-0">
-                {renderBracketMatchCard(knockoutPhases['16avos'][8], "16avos M83", "2K vs 2L")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][9], "16avos M84", "1H vs 2J")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][10], "16avos M81", "1D vs 3BEFIJ")}
-                {renderBracketMatchCard(knockoutPhases['16avos'][11], "16avos M82", "1G vs 3AEHIJ")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][4], "16avos M76", "1C vs 2F")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][5], "16avos M78", "2E vs 2I")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][6], "16avos M79", "1A vs 3CEFHI")}
+                {renderBracketMatchCard(knockoutPhases['16avos'][7], "16avos M80", "1L vs 3EHIJK")}
                 {renderBracketMatchCard(knockoutPhases['16avos'][12], "16avos M86", "1J vs 2H")}
                 {renderBracketMatchCard(knockoutPhases['16avos'][13], "16avos M88", "2D vs 2G")}
                 {renderBracketMatchCard(knockoutPhases['16avos'][14], "16avos M85", "1B vs 3EFGIJ")}

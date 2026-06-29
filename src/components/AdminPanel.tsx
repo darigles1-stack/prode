@@ -36,7 +36,7 @@ interface AdminPanelProps {
   currentUser?: UserProfile;
   matches: SoccerMatch[];
   onAddMatch: (homeTeam: string, awayTeam: string, matchDateISO: string) => Promise<string>;
-  onSettleMatch: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
+  onSettleMatch: (matchId: string, homeScore: number, awayScore: number, winner?: string | null) => Promise<void>;
   onUnsettleMatch: (matchId: string) => Promise<void>;
   prizes: { first: string; second: string; third: string };
   onUpdatePrizes: (newPrizes: { first: string; second: string; third: string }) => void;
@@ -243,6 +243,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [settleErr, setSettleErr] = useState<{ [matchId: string]: string }>({});
   const [settleSubTab, setSettleSubTab] = useState<'pending' | 'finished' | 'users'>('pending');
+  const [selectedWinners, setSelectedWinners] = useState<{ [matchId: string]: string }>({});
 
   // Tournament Reset States
   const [resetStep, setResetStep] = useState(0); // 0 = initial, 1 = first confirmation, 2 = second confirmation
@@ -757,13 +758,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       return;
     }
 
+    const match = matches.find(m => m.id === matchId);
+    let chosenWinner: string | null = null;
+
+    if (match && match.phase !== 'grupos' && home === away) {
+      chosenWinner = selectedWinners[matchId];
+      if (!chosenWinner) {
+        setSettleErr(prev => ({ 
+          ...prev, 
+          [matchId]: 'Es un empate en fase eliminatoria. Debes seleccionar qué equipo clasifica.' 
+        }));
+        return;
+      }
+    }
+
     setSettleErr(prev => ({ ...prev, [matchId]: '' }));
     setSettlingId(matchId);
 
     try {
-      await onSettleMatch(matchId, home, away);
+      await onSettleMatch(matchId, home, away, chosenWinner);
       // Remove settled scores entry
       setSettleScores(prev => {
+        const copy = { ...prev };
+        delete copy[matchId];
+        return copy;
+      });
+      // Clear selected winner entry
+      setSelectedWinners(prev => {
         const copy = { ...prev };
         delete copy[matchId];
         return copy;
@@ -1850,52 +1871,87 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
                     </div>
 
-                    {/* Settle Score box enter */}
-                    <div className="flex items-center space-x-3.5 self-end md:self-center">
-                      <div className="flex items-center space-x-1.5">
-                        <input
-                          type="text"
-                          pattern="[0-9]*"
-                          placeholder="Local"
-                          value={score.home}
-                          onChange={(e) => handleSettleScoreChange(match.id, 'home', e.target.value)}
-                          className="w-12 h-9 border border-slate-200 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
-                        />
-                        <span className="text-slate-400 font-bold">:</span>
-                        <input
-                          type="text"
-                          pattern="[0-9]*"
-                          placeholder="Visita"
-                          value={score.away}
-                          onChange={(e) => handleSettleScoreChange(match.id, 'away', e.target.value)}
-                          className="w-12 h-9 border border-slate-200 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
-                        />
+                    {/* Settle Score box enter and winner selector */}
+                    <div className="flex flex-col items-end gap-2 self-end md:self-center">
+                      <div className="flex items-center space-x-3.5">
+                        <div className="flex items-center space-x-1.5">
+                          <input
+                            type="text"
+                            pattern="[0-9]*"
+                            placeholder="Local"
+                            value={score.home}
+                            onChange={(e) => handleSettleScoreChange(match.id, 'home', e.target.value)}
+                            className="w-12 h-9 border border-slate-200 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
+                          />
+                          <span className="text-slate-400 font-bold">:</span>
+                          <input
+                            type="text"
+                            pattern="[0-9]*"
+                            placeholder="Visita"
+                            value={score.away}
+                            onChange={(e) => handleSettleScoreChange(match.id, 'away', e.target.value)}
+                            className="w-12 h-9 border border-slate-200 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => handleSettleMatchAction(match.id)}
+                          disabled={settlingId === match.id}
+                          className="bg-blue-700 hover:bg-blue-800 text-white font-extrabold px-3 py-2.5 rounded-lg text-xs leading-none transition-all flex items-center space-x-1 shadow-sm cursor-pointer"
+                        >
+                          {settlingId === match.id ? (
+                            <>
+                              <RefreshCcw className="h-3 w-3 animate-spin" />
+                              <span>Cerrando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
+                              <span>Liquidar</span>
+                            </>
+                          )}
+                        </button>
                       </div>
 
-                      <button
-                        onClick={() => handleSettleMatchAction(match.id)}
-                        disabled={settlingId === match.id}
-                        className="bg-blue-700 hover:bg-blue-800 text-white font-extrabold px-3 py-2.5 rounded-lg text-xs leading-none transition-all flex items-center space-x-1 shadow-sm cursor-pointer"
-                      >
-                        {settlingId === match.id ? (
-                          <>
-                            <RefreshCcw className="h-3 w-3 animate-spin" />
-                            <span>Cerrando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-                            <span>Liquidar</span>
-                          </>
-                        )}
-                      </button>
+                      {/* Winner Selector for draw result in knockout stage */}
+                      {match.phase !== 'grupos' && score.home !== '' && score.away !== '' && score.home === score.away && (
+                        <div className="flex flex-col items-end gap-1.5 bg-amber-50/80 border border-amber-250 p-2.5 rounded-xl text-right">
+                          <span className="text-[9.5px] text-amber-900 font-black uppercase tracking-wide">
+                            Clasifica por Penales / Alargue:
+                          </span>
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedWinners(prev => ({ ...prev, [match.id]: match.homeTeam }))}
+                              className={`px-2.5 py-1 rounded-lg border text-[10px] font-black transition-all cursor-pointer ${
+                                selectedWinners[match.id] === match.homeTeam
+                                  ? 'bg-blue-700 text-white border-blue-800 shadow-sm'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {getTeamNameAndFlag(match.homeTeam).name}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedWinners(prev => ({ ...prev, [match.id]: match.awayTeam }))}
+                              className={`px-2.5 py-1 rounded-lg border text-[10px] font-black transition-all cursor-pointer ${
+                                selectedWinners[match.id] === match.awayTeam
+                                  ? 'bg-blue-700 text-white border-blue-800 shadow-sm'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {getTeamNameAndFlag(match.awayTeam).name}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {settleErr[match.id] && (
+                        <div className="text-right text-[10.5px] text-rose-650 font-bold max-w-[280px] leading-tight mt-1">
+                          ⚠️ {settleErr[match.id]}
+                        </div>
+                      )}
                     </div>
-
-                    {settleErr[match.id] && (
-                      <div className="w-full text-left text-xs text-rose-500 font-medium">
-                        {settleErr[match.id]}
-                      </div>
-                    )}
 
                   </div>
                 );
@@ -1927,8 +1983,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     away: match.awayScore !== null ? String(match.awayScore) : '' 
                   };
 
+                  const currentWinnerSelection = selectedWinners[match.id] !== undefined ? selectedWinners[match.id] : (match.winner || '');
                   const hasChanges = (score.home !== '' && score.away !== '') && 
-                    (Number(score.home) !== match.homeScore || Number(score.away) !== match.awayScore);
+                    (Number(score.home) !== match.homeScore || 
+                     Number(score.away) !== match.awayScore || 
+                     (match.phase !== 'grupos' && Number(score.home) === Number(score.away) && currentWinnerSelection !== (match.winner || '')));
 
                   return (
                     <div 
@@ -1967,6 +2026,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">
                             Marcador: {match.homeScore} - {match.awayScore}
                           </span>
+                          {match.winner && (
+                            <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                              Ganador: {getTeamNameAndFlag(match.winner).name} 🏆
+                            </span>
+                          )}
                           <span className="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-blue-200">
                             {(() => {
                               const phaseLabels: { [key: string]: string } = {
@@ -1984,63 +2048,98 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
                       </div>
 
-                      {/* Settle Score box edit */}
-                      <div className="flex items-center space-x-3.5 self-end md:self-center">
-                        <div className="flex items-center space-x-1.5">
-                          <input
-                            type="text"
-                            pattern="[0-9]*"
-                            placeholder="Local"
-                            value={score.home}
-                            onChange={(e) => handleSettleScoreChange(match.id, 'home', e.target.value)}
-                            className="w-12 h-9 border border-slate-250 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
-                          />
-                          <span className="text-slate-400 font-bold">:</span>
-                          <input
-                            type="text"
-                            pattern="[0-9]*"
-                            placeholder="Visita"
-                            value={score.away}
-                            onChange={(e) => handleSettleScoreChange(match.id, 'away', e.target.value)}
-                            className="w-12 h-9 border border-slate-250 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
-                          />
-                        </div>
+                      {/* Settle Score box edit and winner selector */}
+                      <div className="flex flex-col items-end gap-2 self-end md:self-center">
+                        <div className="flex items-center space-x-3.5">
+                          <div className="flex items-center space-x-1.5">
+                            <input
+                              type="text"
+                              pattern="[0-9]*"
+                              placeholder="Local"
+                              value={score.home}
+                              onChange={(e) => handleSettleScoreChange(match.id, 'home', e.target.value)}
+                              className="w-12 h-9 border border-slate-255 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
+                            />
+                            <span className="text-slate-400 font-bold">:</span>
+                            <input
+                              type="text"
+                              pattern="[0-9]*"
+                              placeholder="Visita"
+                              value={score.away}
+                              onChange={(e) => handleSettleScoreChange(match.id, 'away', e.target.value)}
+                              className="w-12 h-9 border border-slate-255 text-center text-sm font-extrabold bg-white text-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono shadow-sm"
+                            />
+                          </div>
 
-                        <div className="flex items-center space-x-2">
-                          {hasChanges && (
+                          <div className="flex items-center space-x-2">
+                            {hasChanges && (
+                              <button
+                                onClick={() => handleSettleMatchAction(match.id)}
+                                disabled={isSettling}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2.5 rounded-lg text-xs leading-none transition-all flex items-center space-x-1 shadow-sm cursor-pointer select-none"
+                              >
+                                {isSettling ? (
+                                  <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                <span>Guardar</span>
+                              </button>
+                            )}
+
                             <button
-                              onClick={() => handleSettleMatchAction(match.id)}
-                              disabled={isSettling}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2.5 rounded-lg text-xs leading-none transition-all flex items-center space-x-1 shadow-sm cursor-pointer select-none"
+                              onClick={() => handleUnsettleMatchAction(match.id)}
+                              disabled={isReopening}
+                              className="px-3 py-2.5 text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-250 rounded-lg font-bold text-xs leading-none flex items-center gap-1 cursor-pointer disabled:opacity-50 select-none transition-all"
+                              title="Volver a poner el partido en estado Pendiente (Borra el marcador y descuenta puntos)"
                             >
-                              {isSettling ? (
-                                <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                              <span>Guardar</span>
+                              <RefreshCcw className={`h-3 w-3.5 ${isReopening ? 'animate-spin' : ''}`} />
+                              <span>Reabrir</span>
                             </button>
-                          )}
-
-                          <button
-                            onClick={() => handleUnsettleMatchAction(match.id)}
-                            disabled={isReopening}
-                            className="px-3 py-2.5 text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-250 rounded-lg font-bold text-xs leading-none flex items-center gap-1 cursor-pointer disabled:opacity-50 select-none transition-all"
-                            title="Volver a poner el partido en estado Pendiente (Borra el marcador y descuenta puntos)"
-                          >
-                            <RefreshCcw className={`h-3 w-3.5 ${isReopening ? 'animate-spin' : ''}`} />
-                            <span>Reabrir</span>
-                          </button>
+                          </div>
                         </div>
+
+                        {/* Winner Selector for draw result in knockout stage */}
+                        {match.phase !== 'grupos' && score.home !== '' && score.away !== '' && Number(score.home) === Number(score.away) && (
+                          <div className="flex flex-col items-end gap-1.5 bg-amber-50/80 border border-amber-250 p-2.5 rounded-xl text-right">
+                            <span className="text-[9.5px] text-amber-900 font-black uppercase tracking-wide">
+                              Clasifica por Penales / Alargue:
+                            </span>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedWinners(prev => ({ ...prev, [match.id]: match.homeTeam }))}
+                                className={`px-2.5 py-1 rounded-lg border text-[10px] font-black transition-all cursor-pointer ${
+                                  currentWinnerSelection === match.homeTeam
+                                    ? 'bg-blue-700 text-white border-blue-800 shadow-sm'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
+                              >
+                                {getTeamNameAndFlag(match.homeTeam).name}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedWinners(prev => ({ ...prev, [match.id]: match.awayTeam }))}
+                                className={`px-2.5 py-1 rounded-lg border text-[10px] font-black transition-all cursor-pointer ${
+                                  currentWinnerSelection === match.awayTeam
+                                    ? 'bg-blue-700 text-white border-blue-800 shadow-sm'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
+                              >
+                                {getTeamNameAndFlag(match.awayTeam).name}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {settleErr[match.id] && (
+                          <div className="text-right text-[10.5px] text-rose-650 font-bold max-w-[280px] leading-tight mt-1">
+                            ⚠️ {settleErr[match.id]}
+                          </div>
+                        )}
                       </div>
-
-                      {settleErr[match.id] && (
-                        <div className="w-full text-left text-xs text-rose-500 font-medium mt-1">
-                          {settleErr[match.id]}
-                        </div>
-                      )}
                     </div>
                   );
                 })}

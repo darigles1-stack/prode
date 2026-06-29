@@ -24,6 +24,7 @@ export interface SoccerMatch {
   awayScore?: number | null; // Real result
   status: 'pending' | 'finished'; // Matches default to pending, finished once settled
   phase?: string; // e.g., 'grupos', '16avos', '8vos', 'cuartos', 'semis', 'final'
+  winner?: string | null; // Winner team name to break draws in knockout stages
   createdAt: string;
   updatedAt?: string;
 }

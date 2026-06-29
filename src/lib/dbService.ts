@@ -822,23 +822,51 @@ export const dbService = {
    *  - Acertar ganador (o empate) pero no resultado exacto: 1 punto.
    *  - Error: 0 puntos.
    */
-  async settleMatch(matchId: string, homeScore: number, awayScore: number): Promise<void> {
+  async settleMatch(matchId: string, homeScore: number, awayScore: number, winner?: string | null): Promise<void> {
     const finalHomeScore = Number(homeScore);
     const finalAwayScore = Number(awayScore);
 
+    let homeTeam = '';
+    let awayTeam = '';
+    let phase = 'grupos';
+
     if (shouldUseFirebase()) {
       try {
-        // 1. Update the match
+        // 1. Fetch match to get team names and phase
         const matchRef = doc(db, 'matches', matchId);
+        const matchSnap = await getDoc(matchRef);
+        if (matchSnap.exists()) {
+          const matchData = matchSnap.data();
+          homeTeam = matchData.homeTeam || '';
+          awayTeam = matchData.awayTeam || '';
+          phase = matchData.phase || 'grupos';
+        }
+
+        let calculatedWinner = null;
+        if (finalHomeScore > finalAwayScore) {
+          calculatedWinner = homeTeam;
+        } else if (finalAwayScore > finalHomeScore) {
+          calculatedWinner = awayTeam;
+        } else {
+          calculatedWinner = winner || null;
+        }
+
+        // 2. Update the match
         await updateDoc(matchRef, {
           homeScore: finalHomeScore,
           awayScore: finalAwayScore,
           status: 'finished',
+          winner: calculatedWinner,
           updatedAt: Timestamp.now()
         });
 
-        // 2. Perform a complete, robust recalculation of ALL forecasts and ALL users from scratch!
+        // 3. Perform a complete, robust recalculation of ALL forecasts and ALL users from scratch!
         await this.syncUserForecastsAndPoints();
+
+        // 4. Propagate winner if knockout stage
+        if (phase !== 'grupos') {
+          await this.propagateKnockoutWinner(matchId, calculatedWinner);
+        }
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `settle/${matchId}`);
         throw err;
@@ -848,32 +876,64 @@ export const dbService = {
       const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
       const mIdx = matches.findIndex(m => m.id === matchId);
       if (mIdx > -1) {
-        matches[mIdx].homeScore = finalHomeScore;
-        matches[mIdx].awayScore = finalAwayScore;
-        matches[mIdx].status = 'finished';
-        matches[mIdx].updatedAt = new Date().toISOString();
-        setLocalData('matches', matches);
-      }
+        const m = matches[mIdx];
+        homeTeam = m.homeTeam;
+        awayTeam = m.awayTeam;
+        phase = m.phase || 'grupos';
 
-      // Perform complete recalculation cleanly
-      await this.syncUserForecastsAndPoints();
+        let calculatedWinner = null;
+        if (finalHomeScore > finalAwayScore) {
+          calculatedWinner = homeTeam;
+        } else if (finalAwayScore > finalHomeScore) {
+          calculatedWinner = awayTeam;
+        } else {
+          calculatedWinner = winner || null;
+        }
+
+        m.homeScore = finalHomeScore;
+        m.awayScore = finalAwayScore;
+        m.status = 'finished';
+        m.winner = calculatedWinner;
+        m.updatedAt = new Date().toISOString();
+        setLocalData('matches', matches);
+
+        // Perform complete recalculation cleanly
+        await this.syncUserForecastsAndPoints();
+
+        if (phase !== 'grupos') {
+          await this.propagateKnockoutWinner(matchId, calculatedWinner);
+        }
+      }
     }
   },
 
   async unsettleMatch(matchId: string): Promise<void> {
+    let phase = 'grupos';
+
     if (shouldUseFirebase()) {
       try {
-        // 1. Reset match status and scores
         const matchRef = doc(db, 'matches', matchId);
+        const matchSnap = await getDoc(matchRef);
+        if (matchSnap.exists()) {
+          phase = matchSnap.data().phase || 'grupos';
+        }
+
+        // 1. Reset match status, scores and winner
         await updateDoc(matchRef, {
           homeScore: null,
           awayScore: null,
           status: 'pending',
+          winner: null,
           updatedAt: Timestamp.now()
         });
 
         // 2. Perform a complete, robust recalculation of ALL forecasts and ALL users from scratch!
         await this.syncUserForecastsAndPoints();
+
+        // 3. Propagate reset
+        if (phase !== 'grupos') {
+          await this.propagateKnockoutWinner(matchId, null);
+        }
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `unsettle/${matchId}`);
         throw err;
@@ -883,15 +943,23 @@ export const dbService = {
       const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
       const mIdx = matches.findIndex(m => m.id === matchId);
       if (mIdx > -1) {
-        matches[mIdx].homeScore = null;
-        matches[mIdx].awayScore = null;
-        matches[mIdx].status = 'pending';
-        matches[mIdx].updatedAt = new Date().toISOString();
-        setLocalData('matches', matches);
-      }
+        const m = matches[mIdx];
+        phase = m.phase || 'grupos';
 
-      // Perform complete recalculation cleanly
-      await this.syncUserForecastsAndPoints();
+        m.homeScore = null;
+        m.awayScore = null;
+        m.status = 'pending';
+        m.winner = null;
+        m.updatedAt = new Date().toISOString();
+        setLocalData('matches', matches);
+
+        // Perform complete recalculation cleanly
+        await this.syncUserForecastsAndPoints();
+
+        if (phase !== 'grupos') {
+          await this.propagateKnockoutWinner(matchId, null);
+        }
+      }
     }
   },
 
@@ -1671,12 +1739,21 @@ export const dbService = {
           return fallbackLabel;
         };
 
-        for (let j = 0; j < pairsCount; j++) {
-          const homeIdx = 2 * j + 1;
-          const awayIdx = 2 * j + 2;
-          const homeTag = getWinnerOfMatch(homeIdx, `Ganador M${homeIdx} de ${sourcePhase.toUpperCase()} 🏆`);
-          const awayTag = getWinnerOfMatch(awayIdx, `Ganador M${awayIdx} de ${sourcePhase.toUpperCase()} 🏆`);
-          pairings.push({ home: homeTag, away: awayTag });
+        if (targetPhase === 'semis') {
+          const m97 = getWinnerOfMatch(1, 'Ganador M97 de CUARTOS 🏆');
+          const m98 = getWinnerOfMatch(3, 'Ganador M98 de CUARTOS 🏆');
+          const m99 = getWinnerOfMatch(2, 'Ganador M99 de CUARTOS 🏆');
+          const m100 = getWinnerOfMatch(4, 'Ganador M100 de CUARTOS 🏆');
+          pairings.push({ home: m97, away: m98 });
+          pairings.push({ home: m99, away: m100 });
+        } else {
+          for (let j = 0; j < pairsCount; j++) {
+            const homeIdx = 2 * j + 1;
+            const awayIdx = 2 * j + 2;
+            const homeTag = getWinnerOfMatch(homeIdx, `Ganador M${homeIdx} de ${sourcePhase.toUpperCase()} 🏆`);
+            const awayTag = getWinnerOfMatch(awayIdx, `Ganador M${awayIdx} de ${sourcePhase.toUpperCase()} 🏆`);
+            pairings.push({ home: homeTag, away: awayTag });
+          }
         }
       }
 
@@ -2518,6 +2595,199 @@ export const dbService = {
       }
       window.dispatchEvent(new Event('prode_db_updated'));
       return { success: true, message: 'Restauración local importada con éxito.' };
+    }
+  },
+
+  getTargetMatchForWinner(matchId: string): { targetMatchId: string; slot: 'home' | 'away' } | null {
+    const parts = matchId.split('_');
+    const phase = parts[0];
+    const idx = parseInt(parts[1], 10);
+    if (isNaN(idx)) return null;
+
+    if (phase === '16avos') {
+      const targetIdx = Math.ceil(idx / 2);
+      const slot = (idx % 2 === 1) ? 'home' : 'away';
+      return { targetMatchId: `8vos_${targetIdx}`, slot };
+    } else if (phase === '8vos') {
+      const targetIdx = Math.ceil(idx / 2);
+      const slot = (idx % 2 === 1) ? 'home' : 'away';
+      return { targetMatchId: `cuartos_${targetIdx}`, slot };
+    } else if (phase === 'cuartos') {
+      // Custom crossover logic
+      if (idx === 1) return { targetMatchId: 'semis_1', slot: 'home' };
+      if (idx === 3) return { targetMatchId: 'semis_1', slot: 'away' };
+      if (idx === 2) return { targetMatchId: 'semis_2', slot: 'home' };
+      if (idx === 4) return { targetMatchId: 'semis_2', slot: 'away' };
+    } else if (phase === 'semis') {
+      const slot = (idx === 1) ? 'home' : 'away';
+      return { targetMatchId: 'final_1', slot };
+    }
+    return null;
+  },
+
+  getKnockoutFallbackLabel(sourceMatchId: string): string {
+    const parts = sourceMatchId.split('_');
+    const phase = parts[0];
+    const idx = parseInt(parts[1], 10);
+    if (phase === '16avos') {
+      return `Ganador M${idx} de 16AVOS 🏆`;
+    } else if (phase === '8vos') {
+      return `Ganador M${idx} de 8VOS 🏆`;
+    } else if (phase === 'cuartos') {
+      if (idx === 1) return 'Ganador M97 de CUARTOS 🏆';
+      if (idx === 3) return 'Ganador M98 de CUARTOS 🏆';
+      if (idx === 2) return 'Ganador M99 de CUARTOS 🏆';
+      if (idx === 4) return 'Ganador M100 de CUARTOS 🏆';
+    } else if (phase === 'semis') {
+      return `Ganador M${idx} de SEMIS 🏆`;
+    }
+    return `Ganador ${sourceMatchId}`;
+  },
+
+  calculateKnockoutMatchDate(matchId: string): Date {
+    const parts = matchId.split('_');
+    const phase = parts[0];
+    const idx = parseInt(parts[1], 10) || 1;
+    const i = idx - 1; // 0-indexed
+
+    if (phase === '8vos') {
+      const dayOffset = Math.floor(i / 2);
+      const hourOffset = i % 2 === 0 ? 15 : 19;
+      return new Date(2026, 6, 4 + dayOffset, hourOffset, 0, 0, 0);
+    } else if (phase === 'cuartos') {
+      return new Date(2026, 6, 9 + i, 18, 0, 0, 0);
+    } else if (phase === 'semis') {
+      return new Date(2026, 6, 14 + i, 21, 0, 0, 0);
+    } else if (phase === 'final') {
+      return new Date(2026, 6, 19, 16, 0, 0, 0);
+    }
+    return new Date(2026, 5, 28, 12, 0, 0, 0);
+  },
+
+  getInitialKnockoutMatchData(targetMatchId: string, slot: 'home' | 'away', teamName: string, dateISO: string) {
+    const parts = targetMatchId.split('_');
+    const phase = parts[0];
+    const idx = parseInt(parts[1], 10);
+
+    let defaultHome = '';
+    let defaultAway = '';
+
+    if (phase === '8vos') {
+      defaultHome = this.getKnockoutFallbackLabel(`16avos_${2 * idx - 1}`);
+      defaultAway = this.getKnockoutFallbackLabel(`16avos_${2 * idx}`);
+    } else if (phase === 'cuartos') {
+      defaultHome = this.getKnockoutFallbackLabel(`8vos_${2 * idx - 1}`);
+      defaultAway = this.getKnockoutFallbackLabel(`8vos_${2 * idx}`);
+    } else if (phase === 'semis') {
+      if (idx === 1) {
+        defaultHome = this.getKnockoutFallbackLabel('cuartos_1');
+        defaultAway = this.getKnockoutFallbackLabel('cuartos_3');
+      } else {
+        defaultHome = this.getKnockoutFallbackLabel('cuartos_2');
+        defaultAway = this.getKnockoutFallbackLabel('cuartos_4');
+      }
+    } else if (phase === 'final') {
+      defaultHome = this.getKnockoutFallbackLabel('semis_1');
+      defaultAway = this.getKnockoutFallbackLabel('semis_2');
+    }
+
+    const homeTeam = slot === 'home' ? teamName : defaultHome;
+    const awayTeam = slot === 'away' ? teamName : defaultAway;
+
+    return {
+      homeTeam,
+      awayTeam,
+      matchDate: dateISO,
+      phase
+    };
+  },
+
+  async propagateKnockoutWinner(matchId: string, winnerTeam: string | null): Promise<void> {
+    const targetDetails = this.getTargetMatchForWinner(matchId);
+    if (!targetDetails) return;
+
+    const { targetMatchId, slot } = targetDetails;
+    const finalWinnerTeam = winnerTeam || this.getKnockoutFallbackLabel(matchId);
+
+    if (shouldUseFirebase()) {
+      try {
+        const targetRef = doc(db, 'matches', targetMatchId);
+        const targetSnap = await getDoc(targetRef);
+
+        const updates: any = {
+          [slot === 'home' ? 'homeTeam' : 'awayTeam']: finalWinnerTeam,
+          updatedAt: Timestamp.now()
+        };
+
+        if (!targetSnap.exists()) {
+          const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
+          const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalWinnerTeam, dateObj.toISOString());
+          const matchPayload = {
+            ...initialData,
+            matchDate: Timestamp.fromDate(new Date(initialData.matchDate)),
+            status: 'pending',
+            createdAt: Timestamp.now()
+          };
+          await setDoc(targetRef, matchPayload);
+        } else {
+          const currentTargetData = targetSnap.data();
+          const currentTeamInSlot = slot === 'home' ? currentTargetData.homeTeam : currentTargetData.awayTeam;
+
+          if (currentTeamInSlot !== finalWinnerTeam) {
+            if (currentTargetData.status === 'finished') {
+              updates.status = 'pending';
+              updates.homeScore = null;
+              updates.awayScore = null;
+              updates.winner = null;
+              await updateDoc(targetRef, updates);
+              await this.propagateKnockoutWinner(targetMatchId, null);
+            } else {
+              await updateDoc(targetRef, updates);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`Error propagating knockout winner for ${matchId} to ${targetMatchId}:`, err);
+      }
+    } else {
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      let targetIdx = matches.findIndex(m => m.id === targetMatchId);
+
+      if (targetIdx === -1) {
+        const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
+        const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalWinnerTeam, dateObj.toISOString());
+        const newMatch: SoccerMatch = {
+          id: targetMatchId,
+          ...initialData,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        };
+        matches.push(newMatch);
+        setLocalData('matches', matches);
+      } else {
+        const targetMatch = matches[targetIdx];
+        const currentTeamInSlot = slot === 'home' ? targetMatch.homeTeam : targetMatch.awayTeam;
+
+        if (currentTeamInSlot !== finalWinnerTeam) {
+          if (slot === 'home') {
+            targetMatch.homeTeam = finalWinnerTeam;
+          } else {
+            targetMatch.awayTeam = finalWinnerTeam;
+          }
+          targetMatch.updatedAt = new Date().toISOString();
+
+          if (targetMatch.status === 'finished') {
+            targetMatch.status = 'pending';
+            targetMatch.homeScore = null;
+            targetMatch.awayScore = null;
+            targetMatch.winner = null;
+            setLocalData('matches', matches);
+            await this.propagateKnockoutWinner(targetMatchId, null);
+          } else {
+            setLocalData('matches', matches);
+          }
+        }
+      }
     }
   }
 };

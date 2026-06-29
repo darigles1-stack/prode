@@ -287,8 +287,8 @@ export default function App() {
     return dbService.addMatch(homeTeam, awayTeam, matchDateISO);
   };
 
-  const handleSettleMatch = async (matchId: string, homeScore: number, awayScore: number) => {
-    return dbService.settleMatch(matchId, homeScore, awayScore);
+  const handleSettleMatch = async (matchId: string, homeScore: number, awayScore: number, winner?: string | null) => {
+    return dbService.settleMatch(matchId, homeScore, awayScore, winner);
   };
 
   const handleUnsettleMatch = async (matchId: string) => {
