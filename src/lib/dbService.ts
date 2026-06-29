@@ -2788,6 +2788,7 @@ export const dbService = {
           }
         }
       }
+      window.dispatchEvent(new Event('prode_db_updated'));
     }
   }
 };
