@@ -275,6 +275,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isUploadingJson, setIsUploadingJson] = useState(false);
   const [jsonUploadFeedback, setJsonUploadFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  // Corrective JSON Upload for Match Dates/Schedules
+  const [correctiveJsonText, setCorrectiveJsonText] = useState('');
+  const [isUpdatingDates, setIsUpdatingDates] = useState(false);
+  const [correctiveFeedback, setCorrectiveFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
   const handleResetTournament = async () => {
     setIsResetting(true);
     setResetFeedback(null);
@@ -444,6 +449,49 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setJsonUploadFeedback(null);
     };
     reader.readAsText(file);
+  };
+
+  const handleCorrectiveJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setCorrectiveJsonText(text);
+      setCorrectiveFeedback(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleUpdateMatchDatesFromJson = async (jsonStringToParse: string) => {
+    if (!jsonStringToParse.trim()) {
+      setCorrectiveFeedback({ type: 'error', msg: 'La caja de texto JSON está vacía o el archivo no cargó correctamente.' });
+      return;
+    }
+
+    setIsUpdatingDates(true);
+    setCorrectiveFeedback(null);
+
+    try {
+      let parsed = JSON.parse(jsonStringToParse);
+      if (!Array.isArray(parsed)) {
+        throw new Error('El JSON debe ser un Array (arreglo) de objetos correspondientes a partidos.');
+      }
+
+      const res = await dbService.updateMatchDatesFromJson(parsed);
+      if (res.success) {
+        setCorrectiveFeedback({ type: 'success', msg: `¡Horarios corregidos con éxito! ${res.message}` });
+        setCorrectiveJsonText('');
+      } else {
+        setCorrectiveFeedback({ type: 'error', msg: res.message });
+      }
+    } catch (e: any) {
+      console.error(e);
+      setCorrectiveFeedback({ type: 'error', msg: `Error de procesamiento del JSON: ${e.message || e}` });
+    } finally {
+      setIsUpdatingDates(false);
+    }
   };
 
   // Export JSON state
@@ -1591,6 +1639,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <li><code className="bg-slate-200 px-1 rounded font-mono">awayTeam</code> o <code className="bg-slate-200 px-1 rounded font-mono">visitante</code> (ej: "Brasil")</li>
                 <li><code className="bg-slate-200 px-1 rounded font-mono">matchDate</code>, <code className="bg-slate-200 px-1 rounded font-mono">date</code> o <code className="bg-slate-200 px-1 rounded font-mono">fecha</code> (formato ISO o YYYY-MM-DD HH:MM)</li>
                 <li><code className="bg-slate-200 px-1 rounded font-mono">phase</code> o <code className="bg-slate-205 px-1 rounded font-mono">grupo</code> (opcional, ej: "Grupo A", por defecto "grupos")</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* CORRECTIVE UPLOAD FOR MATCH DATES (JSON BASED) */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-extrabold text-blue-950 mb-1 flex items-center gap-1.5 font-sans">
+            <Calendar className="h-4.5 w-4.5 text-blue-700 shrink-0" />
+            <span>Corregir Horarios de Partidos (JSON) ⏰</span>
+          </h3>
+          <p className="text-[11px] text-slate-500 leading-relaxed mb-4 font-sans">
+            Actualizá de forma masiva los horarios y fechas de partidos existentes cargando un archivo <strong>.json</strong> o pegando el contenido. Busca coincidencias por ID o nombres de equipos.
+          </p>
+
+          <div className="space-y-4">
+            {/* Drag & drop or files picker container */}
+            <div className="border border-dashed border-slate-300 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/10 p-3.5 rounded-xl transition-all cursor-pointer relative text-center">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleCorrectiveJsonFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="flex flex-col items-center gap-1 font-sans">
+                <UploadCloud className="h-7 w-7 text-blue-500" />
+                <span className="text-xs font-bold text-slate-700">Arrastrá tu archivo .json</span>
+                <span className="text-[10px] text-slate-400">o hacé clic para explorar tus carpetas</span>
+              </div>
+            </div>
+
+            {/* Pasting area style indicator */}
+            <div className="space-y-1">
+              <label className="block text-[10px] font-extrabold text-slate-400 uppercase text-left">
+                O pegá el texto del JSON directamente abajo:
+              </label>
+              <textarea
+                value={correctiveJsonText}
+                onChange={(e) => setCorrectiveJsonText(e.target.value)}
+                placeholder='[\n  {\n    "id": "16avos_1",\n    "matchDate": "2026-06-29T16:00:00.000Z"\n  }\n]'
+                rows={5}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-mono leading-normal focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all resize-y"
+              />
+            </div>
+
+            {correctiveFeedback && (
+              <div className={`text-[11px] p-3 rounded-xl border text-left font-medium ${
+                correctiveFeedback.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                  : 'bg-rose-50 text-rose-800 border-rose-250'
+              }`}>
+                {correctiveFeedback.msg}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => handleUpdateMatchDatesFromJson(correctiveJsonText)}
+              disabled={isUpdatingDates || !correctiveJsonText.trim()}
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-40 select-none"
+            >
+              {isUpdatingDates ? (
+                <>
+                  <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Actualizando horarios...</span>
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Aplicar Corrección de Horarios</span>
+                </>
+              )}
+            </button>
+
+            {/* Instruction block on format */}
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-150 text-[9.5px] text-slate-500 leading-relaxed font-sans mt-3 text-left space-y-1">
+              <span className="font-extrabold text-slate-700 uppercase tracking-wide block">📋 Formato JSON para Corrección:</span>
+              <p>Se actualizará el campo de fecha de inicio para cada partido que coincida:</p>
+              <ul className="list-disc pl-3.5 space-y-0.5">
+                <li>Búsqueda por <code className="bg-slate-200 px-1 rounded font-mono">id</code> (ej: "16avos_3")</li>
+                <li>Búsqueda por nombres de equipos: <code className="bg-slate-200 px-1 rounded font-mono">homeTeam</code>/<code className="bg-slate-200 px-1 rounded font-mono">local</code> y <code className="bg-slate-200 px-1 rounded font-mono">awayTeam</code>/<code className="bg-slate-200 px-1 rounded font-mono">visitante</code></li>
+                <li>Campo de fecha: <code className="bg-slate-200 px-1 rounded font-mono">matchDate</code> o <code className="bg-slate-200 px-1 rounded font-mono">date</code> o <code className="bg-slate-200 px-1 rounded font-mono">fecha</code> (formato ISO)</li>
               </ul>
             </div>
           </div>

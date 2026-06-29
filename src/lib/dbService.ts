@@ -2121,6 +2121,154 @@ export const dbService = {
     }
   },
 
+  async updateMatchDatesFromJson(updates: any[]): Promise<{ success: boolean; message: string; updatedCount: number }> {
+    const isFirebase = shouldUseFirebase();
+    let updatedCount = 0;
+
+    if (isFirebase) {
+      try {
+        const matchesRef = collection(db, 'matches');
+        const snap = await getDocs(matchesRef);
+        const existingMatches = snap.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        })) as any[];
+
+        let batch = writeBatch(db);
+        let writeCount = 0;
+
+        const checkAndCommitBatch = async () => {
+          if (writeCount >= 400) {
+            await batch.commit();
+            batch = writeBatch(db);
+            writeCount = 0;
+          }
+        };
+
+        const cleanStr = (s: string) => {
+          if (!s) return '';
+          return s.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '')
+            .replace(/\uDB40[\uDC00-\uDFFF]/g, '')
+            .trim()
+            .toLowerCase();
+        };
+
+        for (const item of updates) {
+          const id = item.id;
+          const home = item.homeTeam || item.local;
+          const away = item.awayTeam || item.visitante;
+          const dateStr = item.matchDate || item.date || item.fecha;
+
+          if (!dateStr) continue;
+
+          let targetMatch: any = null;
+
+          // 1. Match by exact ID
+          if (id) {
+            targetMatch = existingMatches.find(m => m.id === id);
+          }
+
+          // 2. Match by clean team names
+          if (!targetMatch && home && away) {
+            const cleanHome = cleanStr(home);
+            const cleanAway = cleanStr(away);
+            targetMatch = existingMatches.find(m => 
+              cleanStr(m.homeTeam) === cleanHome && cleanStr(m.awayTeam) === cleanAway
+            );
+          }
+
+          if (targetMatch) {
+            let dateObj: Date;
+            try {
+              if (item.fecha && item.hora) {
+                dateObj = new Date(`${item.fecha}T${item.hora}:00`);
+              } else {
+                dateObj = new Date(dateStr);
+              }
+              if (isNaN(dateObj.getTime())) throw new Error();
+            } catch {
+              continue; // Skip invalid dates
+            }
+
+            const docRef = doc(db, 'matches', targetMatch.id);
+            batch.update(docRef, {
+              matchDate: Timestamp.fromDate(dateObj),
+              updatedAt: Timestamp.now()
+            });
+            writeCount++;
+            updatedCount++;
+            await checkAndCommitBatch();
+          }
+        }
+
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'update-match-dates-json');
+        throw err;
+      }
+    } else {
+      // Local Storage simulation
+      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+      const cleanStr = (s: string) => {
+        if (!s) return '';
+        return s.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '')
+          .replace(/\uDB40[\uDC00-\uDFFF]/g, '')
+          .trim()
+          .toLowerCase();
+      };
+
+      for (const item of updates) {
+        const id = item.id;
+        const home = item.homeTeam || item.local;
+        const away = item.awayTeam || item.visitante;
+        const dateStr = item.matchDate || item.date || item.fecha;
+
+        if (!dateStr) continue;
+
+        let matchIdx = -1;
+        if (id) {
+          matchIdx = matches.findIndex(m => m.id === id);
+        }
+
+        if (matchIdx === -1 && home && away) {
+          const cleanHome = cleanStr(home);
+          const cleanAway = cleanStr(away);
+          matchIdx = matches.findIndex(m => 
+            cleanStr(m.homeTeam) === cleanHome && cleanStr(m.awayTeam) === cleanAway
+          );
+        }
+
+        if (matchIdx !== -1) {
+          let dateISO: string;
+          try {
+            if (item.fecha && item.hora) {
+              dateISO = new Date(`${item.fecha}T${item.hora}:00`).toISOString();
+            } else {
+              dateISO = new Date(dateStr).toISOString();
+            }
+          } catch {
+            continue;
+          }
+
+          matches[matchIdx].matchDate = dateISO;
+          matches[matchIdx].updatedAt = new Date().toISOString();
+          updatedCount++;
+        }
+      }
+
+      setLocalData('matches', matches);
+    }
+
+    window.dispatchEvent(new Event('prode_db_updated'));
+    return {
+      success: true,
+      message: `Se actualizaron los horarios de ${updatedCount} partidos exitosamente.`,
+      updatedCount
+    };
+  },
+
   async exportBackupData(): Promise<any> {
     const isFirebase = shouldUseFirebase();
     if (isFirebase) {
