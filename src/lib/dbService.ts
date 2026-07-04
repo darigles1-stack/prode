@@ -2346,6 +2346,177 @@ export const dbService = {
     };
   },
 
+  async updateMatchupsOnly(matchups: { id: string; homeTeam: string; awayTeam: string }[]): Promise<{ success: boolean; message: string; updatedCount: number }> {
+    const isFirebase = shouldUseFirebase();
+    let updatedCount = 0;
+
+    if (isFirebase) {
+      try {
+        const batch = writeBatch(db);
+        let writeCount = 0;
+
+        for (const matchup of matchups) {
+          if (!matchup.id || !matchup.homeTeam || !matchup.awayTeam) continue;
+          
+          const matchRef = doc(db, 'matches', matchup.id);
+          const matchSnap = await getDoc(matchRef);
+          
+          if (matchSnap.exists()) {
+            batch.update(matchRef, { 
+              homeTeam: matchup.homeTeam, 
+              awayTeam: matchup.awayTeam 
+            });
+            writeCount++;
+            updatedCount++;
+
+            if (writeCount >= 400) {
+              await batch.commit();
+              writeCount = 0;
+            }
+          }
+        }
+        
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+      } catch (err: any) {
+        console.error('Error in updateMatchupsOnly (Firebase):', err);
+        return { success: false, message: err.message || 'Error al actualizar cruces en la base de datos.', updatedCount: 0 };
+      }
+    } else {
+      let matches = getLocalData<SoccerMatch[]>('matches') || [];
+      
+      for (const matchup of matchups) {
+        if (!matchup.id || !matchup.homeTeam || !matchup.awayTeam) continue;
+        const matchIdx = matches.findIndex(m => m.id === matchup.id);
+        if (matchIdx !== -1) {
+          matches[matchIdx] = {
+            ...matches[matchIdx],
+            homeTeam: matchup.homeTeam,
+            awayTeam: matchup.awayTeam
+          };
+          updatedCount++;
+        }
+      }
+
+      setLocalData('matches', matches);
+    }
+
+    window.dispatchEvent(new Event('prode_db_updated'));
+    return {
+      success: true,
+      message: `Se actualizaron los cruces de ${updatedCount} partidos exitosamente.`,
+      updatedCount
+    };
+  },
+
+  async updateCombinedMatchDataFromJson(updates: any[]): Promise<{ success: boolean; message: string; updatedCount: number }> {
+    const isFirebase = shouldUseFirebase();
+    let updatedCount = 0;
+
+    if (isFirebase) {
+      try {
+        const batch = writeBatch(db);
+        let writeCount = 0;
+
+        for (const item of updates) {
+          const id = item.id;
+          if (!id) continue;
+
+          let hasUpdates = false;
+          const updateData: any = {};
+
+          if (item.homeTeam) { updateData.homeTeam = item.homeTeam; hasUpdates = true; }
+          if (item.awayTeam) { updateData.awayTeam = item.awayTeam; hasUpdates = true; }
+          if (item.phase) { updateData.phase = item.phase; hasUpdates = true; }
+
+          const dateStr = item.matchDate || item.date || item.fecha;
+          if (dateStr) {
+            try {
+              let dateObj: Date;
+              if (item.fecha && item.hora) {
+                dateObj = new Date(`${item.fecha}T${item.hora}:00`);
+              } else {
+                dateObj = new Date(dateStr);
+              }
+              if (!isNaN(dateObj.getTime())) {
+                updateData.matchDate = Timestamp.fromDate(dateObj);
+                hasUpdates = true;
+              }
+            } catch {
+              // Ignore date parsing errors
+            }
+          }
+
+          if (hasUpdates) {
+            updateData.updatedAt = Timestamp.now();
+            const docRef = doc(db, 'matches', id);
+            batch.update(docRef, updateData);
+            writeCount++;
+            updatedCount++;
+
+            if (writeCount >= 400) {
+              await batch.commit();
+              writeCount = 0;
+            }
+          }
+        }
+        
+        if (writeCount > 0) {
+          await batch.commit();
+        }
+      } catch (err: any) {
+        console.error('Error in updateCombinedMatchDataFromJson (Firebase):', err);
+        return { success: false, message: err.message || 'Error al actualizar datos en la base de datos.', updatedCount: 0 };
+      }
+    } else {
+      let matches = getLocalData<SoccerMatch[]>('matches') || [];
+      
+      for (const item of updates) {
+        const id = item.id;
+        if (!id) continue;
+
+        const matchIdx = matches.findIndex(m => m.id === id);
+        if (matchIdx !== -1) {
+          let hasUpdates = false;
+          if (item.homeTeam) { matches[matchIdx].homeTeam = item.homeTeam; hasUpdates = true; }
+          if (item.awayTeam) { matches[matchIdx].awayTeam = item.awayTeam; hasUpdates = true; }
+          if (item.phase) { matches[matchIdx].phase = item.phase; hasUpdates = true; }
+
+          const dateStr = item.matchDate || item.date || item.fecha;
+          if (dateStr) {
+            try {
+              let dateISO: string;
+              if (item.fecha && item.hora) {
+                dateISO = new Date(`${item.fecha}T${item.hora}:00`).toISOString();
+              } else {
+                dateISO = new Date(dateStr).toISOString();
+              }
+              matches[matchIdx].matchDate = dateISO;
+              hasUpdates = true;
+            } catch {
+              // Ignore
+            }
+          }
+
+          if (hasUpdates) {
+            matches[matchIdx].updatedAt = new Date().toISOString();
+            updatedCount++;
+          }
+        }
+      }
+
+      setLocalData('matches', matches);
+    }
+
+    window.dispatchEvent(new Event('prode_db_updated'));
+    return {
+      success: true,
+      message: `Se actualizaron los datos de ${updatedCount} partidos exitosamente.`,
+      updatedCount
+    };
+  },
+
   async exportBackupData(): Promise<any> {
     const isFirebase = shouldUseFirebase();
     if (isFirebase) {
