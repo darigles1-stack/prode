@@ -1795,7 +1795,7 @@ export const dbService = {
         } else if (targetPhase === '8vos') {
           // Saturday, July 4 (Day 0) to Tuesday, July 7 (Day 3). 2 matches per day.
           const dayOffset = Math.floor(i / 2);
-          const hourOffset = i % 2 === 0 ? 15 : 19; // Spaced 15:00 and 19:00 Argentina time
+          const hourOffset = i % 2 === 0 ? 14 : 18; // Spaced 14:00 and 18:00 Argentina time
           // July is 6 (0-indexed)
           dateObj = new Date(2026, 6, 4 + dayOffset, hourOffset, 0, 0, 0);
         } else if (targetPhase === 'cuartos') {
