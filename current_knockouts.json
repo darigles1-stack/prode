@@ -1,0 +1,46 @@
+[
+  {
+    "id": "cuartos_1",
+    "phase": "cuartos",
+    "status": "pending",
+    "homeTeam": "Marruecos 🇲🇦",
+    "awayTeam": "Francia 🇫🇷",
+    "homeScore": null,
+    "awayScore": null,
+    "winner": null,
+    "matchDate": "2026-07-09T21:00:00"
+  },
+  {
+    "id": "cuartos_2",
+    "phase": "cuartos",
+    "status": "pending",
+    "homeTeam": "Noruega 🇳🇴",
+    "awayTeam": "Inglaterra 🏴",
+    "homeScore": null,
+    "awayScore": null,
+    "winner": null,
+    "matchDate": "2026-07-10T21:00:00"
+  },
+  {
+    "id": "cuartos_3",
+    "phase": "cuartos",
+    "status": "pending",
+    "homeTeam": "España 🇪🇸",
+    "awayTeam": "Bélgica 🇧🇪",
+    "homeScore": null,
+    "awayScore": null,
+    "winner": null,
+    "matchDate": "2026-07-11T21:00:05"
+  },
+  {
+    "id": "cuartos_4",
+    "phase": "cuartos",
+    "status": "pending",
+    "homeTeam": "Argentina 🇦🇷",
+    "awayTeam": "Suiza 🇨🇭",
+    "homeScore": null,
+    "awayScore": null,
+    "winner": null,
+    "matchDate": "2026-07-12T21:00:00"
+  }
+]
