@@ -26,12 +26,12 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, ini
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const playlist = React.useMemo(() => [
-    '/tema1.mp3',
-    '/tema2.mp3',
-    '/tema4.mp3',
-    '/tema5.mp3',
-    '/tema6.mp3',
-    '/tema7.mp3'
+    '/musicas/tema1.mp3',
+    '/musicas/tema2.mp3',
+    '/musicas/tema4.mp3',
+    '/musicas/tema5.mp3',
+    '/musicas/tema6.mp3',
+    '/musicas/tema7.mp3'
   ], []);
 
   React.useEffect(() => {
