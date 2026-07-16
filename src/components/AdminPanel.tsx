@@ -139,7 +139,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     '8vos': '8vos de Final 🛡️',
     cuartos: 'Cuartos de Final 🏆',
     semis: 'Semifinales ⭐',
-    final: 'Gran Final 🏅'
+    final: 'Gran Final y Tercer Puesto 🏅'
   };
 
   const handleEnableNextPhase = async () => {
@@ -812,8 +812,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  const pendingMatches = matches.filter(m => m.status === 'pending');
-  const finishedMatches = matches.filter(m => m.status === 'finished');
+  const pendingMatches = [...matches].filter(m => m.status === 'pending').sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+  const finishedMatches = [...matches].filter(m => m.status === 'finished').sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
 
   // Bulk JSON liquidator actions
   const handleGenerateJsonTemplate = () => {
@@ -2005,7 +2005,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               '8vos': '8vos de Final',
                               'cuartos': 'Cuartos de Final',
                               'semis': 'Semifinales',
-                              'final': 'Gran Final'
+                              'final': 'Gran Final y Tercer Puesto'
                             };
                             const p = match.phase || 'grupos';
                             return phaseLabels[p] || (p.toLowerCase().includes('grupo') ? `Grupo ${p.replace(/grupo/i, '').trim()}` : p);

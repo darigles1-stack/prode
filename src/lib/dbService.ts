@@ -1725,7 +1725,7 @@ export const dbService = {
         if (targetPhase === '8vos') { sourcePhase = '16avos'; pairsCount = 8; sourceLabel = '16avos'; }
         else if (targetPhase === 'cuartos') { sourcePhase = '8vos'; pairsCount = 4; sourceLabel = '8vos'; }
         else if (targetPhase === 'semis') { sourcePhase = 'cuartos'; pairsCount = 2; sourceLabel = '8vos (Cuartos)'; }
-        else if (targetPhase === 'final') { sourcePhase = 'semis'; pairsCount = 1; sourceLabel = '8vos (Semis)'; }
+        else if (targetPhase === 'final') { sourcePhase = 'semis'; pairsCount = 2; sourceLabel = '8vos (Semis)'; }
 
         const getWinnerOfMatch = (idxOneBased: number, fallbackLabel: string): string => {
           if (mode === 'placeholder') return fallbackLabel;
@@ -1746,6 +1746,31 @@ export const dbService = {
           const m100 = getWinnerOfMatch(4, 'Ganador M100 de CUARTOS 🏆');
           pairings.push({ home: m97, away: m98 });
           pairings.push({ home: m99, away: m100 });
+        } else if (targetPhase === 'final') {
+          // Final: winners of semis_1 and semis_2
+          const w1 = getWinnerOfMatch(1, 'Ganador M101 de SEMIS 🏆');
+          const w2 = getWinnerOfMatch(2, 'Ganador M102 de SEMIS 🏆');
+          pairings.push({ home: w1, away: w2 });
+
+          // Third place: losers of semis_1 and semis_2
+          const getLoserOfMatch = (idxOneBased: number, fallbackLabel: string): string => {
+            if (mode === 'placeholder') return fallbackLabel;
+            const parentMatchId = `semis_${idxOneBased}`;
+            const m = currentMatches.find(x => x.id === parentMatchId);
+            if (m && m.status === 'finished' && m.homeScore !== null && m.awayScore !== null) {
+              if (m.homeScore > m.awayScore) return m.awayTeam;
+              if (m.awayScore > m.homeScore) return m.homeTeam;
+              if (m.winner) {
+                return m.winner === m.homeTeam ? m.awayTeam : m.homeTeam;
+              }
+              return `Perdedor ${m.homeTeam} / ${m.awayTeam}`;
+            }
+            return fallbackLabel;
+          };
+
+          const l1 = getLoserOfMatch(1, 'Perdedor M101 de SEMIS 🥉');
+          const l2 = getLoserOfMatch(2, 'Perdedor M102 de SEMIS 🥉');
+          pairings.push({ home: l1, away: l2 });
         } else {
           for (let j = 0; j < pairsCount; j++) {
             const homeIdx = 2 * j + 1;
@@ -1811,9 +1836,11 @@ export const dbService = {
           // July is 6 (0-indexed)
           dateObj = new Date(2026, 6, 14 + dayOffset, hourOffset, 0, 0, 0);
         } else if (targetPhase === 'final') {
-          // Sunday, July 19.
-          // July is 6 (0-indexed)
-          dateObj = new Date(2026, 6, 19, 16, 0, 0, 0); // 16:00 Argentina time
+          if (i === 1) {
+            dateObj = new Date(2026, 6, 18, 16, 0, 0, 0); // Saturday July 18 (Third-place)
+          } else {
+            dateObj = new Date(2026, 6, 19, 16, 0, 0, 0); // Sunday July 19 (Final)
+          }
         } else {
           dateObj = new Date(2026, 5, 28 + Math.floor(i / 4), 12 + (i % 4) * 3, 0, 0, 0);
         }
@@ -1871,7 +1898,7 @@ export const dbService = {
         '8vos': '8vos de Final',
         'cuartos': 'Cuartos de Final',
         'semis': 'Semifinales',
-        'final': 'Gran Final'
+        'final': 'Gran Final y Tercer Puesto'
       };
       const labelValue = phaseLabels[targetPhase] || targetPhase;
 
@@ -2831,6 +2858,8 @@ export const dbService = {
       return new Date(2026, 6, 14 + i, 21, 0, 0, 0);
     } else if (phase === 'final') {
       return new Date(2026, 6, 19, 16, 0, 0, 0);
+    } else if (phase === 'tercer') {
+      return new Date(2026, 6, 18, 16, 0, 0, 0); // Saturday July 18, 2026 at 16:00 hs
     }
     return new Date(2026, 5, 28, 12, 0, 0, 0);
   },
@@ -2858,8 +2887,16 @@ export const dbService = {
         defaultAway = this.getKnockoutFallbackLabel('cuartos_4');
       }
     } else if (phase === 'final') {
-      defaultHome = this.getKnockoutFallbackLabel('semis_1');
-      defaultAway = this.getKnockoutFallbackLabel('semis_2');
+      if (idx === 2) {
+        defaultHome = 'Perdedor M1 de SEMIS 🥉';
+        defaultAway = 'Perdedor M2 de SEMIS 🥉';
+      } else {
+        defaultHome = this.getKnockoutFallbackLabel('semis_1');
+        defaultAway = this.getKnockoutFallbackLabel('semis_2');
+      }
+    } else if (phase === 'tercer') {
+      defaultHome = 'Perdedor M1 de SEMIS 🥉';
+      defaultAway = 'Perdedor M2 de SEMIS 🥉';
     }
 
     const homeTeam = slot === 'home' ? teamName : defaultHome;
@@ -2869,97 +2906,217 @@ export const dbService = {
       homeTeam,
       awayTeam,
       matchDate: dateISO,
-      phase
+      phase: phase === 'tercer' ? 'final' : phase
     };
   },
 
   async propagateKnockoutWinner(matchId: string, winnerTeam: string | null): Promise<void> {
     const targetDetails = this.getTargetMatchForWinner(matchId);
-    if (!targetDetails) return;
+    if (targetDetails) {
+      const { targetMatchId, slot } = targetDetails;
+      const finalWinnerTeam = winnerTeam || this.getKnockoutFallbackLabel(matchId);
 
-    const { targetMatchId, slot } = targetDetails;
-    const finalWinnerTeam = winnerTeam || this.getKnockoutFallbackLabel(matchId);
+      if (shouldUseFirebase()) {
+        try {
+          const targetRef = doc(db, 'matches', targetMatchId);
+          const targetSnap = await getDoc(targetRef);
 
-    if (shouldUseFirebase()) {
-      try {
-        const targetRef = doc(db, 'matches', targetMatchId);
-        const targetSnap = await getDoc(targetRef);
+          const updates: any = {
+            [slot === 'home' ? 'homeTeam' : 'awayTeam']: finalWinnerTeam,
+            updatedAt: Timestamp.now()
+          };
 
-        const updates: any = {
-          [slot === 'home' ? 'homeTeam' : 'awayTeam']: finalWinnerTeam,
-          updatedAt: Timestamp.now()
-        };
+          if (!targetSnap.exists()) {
+            const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
+            const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalWinnerTeam, dateObj.toISOString());
+            const matchPayload = {
+              ...initialData,
+              matchDate: Timestamp.fromDate(new Date(initialData.matchDate)),
+              status: 'pending',
+              createdAt: Timestamp.now()
+            };
+            await setDoc(targetRef, matchPayload);
+          } else {
+            const currentTargetData = targetSnap.data();
+            const currentTeamInSlot = slot === 'home' ? currentTargetData.homeTeam : currentTargetData.awayTeam;
 
-        if (!targetSnap.exists()) {
+            if (currentTeamInSlot !== finalWinnerTeam) {
+              if (currentTargetData.status === 'finished') {
+                updates.status = 'pending';
+                updates.homeScore = null;
+                updates.awayScore = null;
+                updates.winner = null;
+                await updateDoc(targetRef, updates);
+                await this.propagateKnockoutWinner(targetMatchId, null);
+              } else {
+                await updateDoc(targetRef, updates);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Error propagating knockout winner for ${matchId} to ${targetMatchId}:`, err);
+        }
+      } else {
+        const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+        let targetIdx = matches.findIndex(m => m.id === targetMatchId);
+
+        if (targetIdx === -1) {
           const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
           const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalWinnerTeam, dateObj.toISOString());
-          const matchPayload = {
+          const newMatch: SoccerMatch = {
+            id: targetMatchId,
             ...initialData,
-            matchDate: Timestamp.fromDate(new Date(initialData.matchDate)),
             status: 'pending',
-            createdAt: Timestamp.now()
+            createdAt: new Date().toISOString()
           };
-          await setDoc(targetRef, matchPayload);
+          matches.push(newMatch);
+          setLocalData('matches', matches);
         } else {
-          const currentTargetData = targetSnap.data();
-          const currentTeamInSlot = slot === 'home' ? currentTargetData.homeTeam : currentTargetData.awayTeam;
+          const targetMatch = matches[targetIdx];
+          const currentTeamInSlot = slot === 'home' ? targetMatch.homeTeam : targetMatch.awayTeam;
 
           if (currentTeamInSlot !== finalWinnerTeam) {
-            if (currentTargetData.status === 'finished') {
-              updates.status = 'pending';
-              updates.homeScore = null;
-              updates.awayScore = null;
-              updates.winner = null;
-              await updateDoc(targetRef, updates);
+            if (slot === 'home') {
+              targetMatch.homeTeam = finalWinnerTeam;
+            } else {
+              targetMatch.awayTeam = finalWinnerTeam;
+            }
+            targetMatch.updatedAt = new Date().toISOString();
+
+            if (targetMatch.status === 'finished') {
+              targetMatch.status = 'pending';
+              targetMatch.homeScore = null;
+              targetMatch.awayScore = null;
+              targetMatch.winner = null;
+              setLocalData('matches', matches);
               await this.propagateKnockoutWinner(targetMatchId, null);
             } else {
-              await updateDoc(targetRef, updates);
+              setLocalData('matches', matches);
             }
           }
         }
-      } catch (err) {
-        console.error(`Error propagating knockout winner for ${matchId} to ${targetMatchId}:`, err);
+        window.dispatchEvent(new Event('prode_db_updated'));
       }
-    } else {
-      const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
-      let targetIdx = matches.findIndex(m => m.id === targetMatchId);
+    }
 
-      if (targetIdx === -1) {
-        const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
-        const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalWinnerTeam, dateObj.toISOString());
-        const newMatch: SoccerMatch = {
-          id: targetMatchId,
-          ...initialData,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        };
-        matches.push(newMatch);
-        setLocalData('matches', matches);
-      } else {
-        const targetMatch = matches[targetIdx];
-        const currentTeamInSlot = slot === 'home' ? targetMatch.homeTeam : targetMatch.awayTeam;
+    // Now propagate loser if it is a semifinal match
+    const parts = matchId.split('_');
+    const phase = parts[0];
+    const idx = parseInt(parts[1], 10);
+    if (phase === 'semis' && !isNaN(idx)) {
+      const targetMatchId = 'final_2';
+      const slot = (idx === 1) ? 'home' : 'away';
 
-        if (currentTeamInSlot !== finalWinnerTeam) {
-          if (slot === 'home') {
-            targetMatch.homeTeam = finalWinnerTeam;
-          } else {
-            targetMatch.awayTeam = finalWinnerTeam;
+      let loserTeam: string | null = null;
+      if (winnerTeam) {
+        let mHome = '';
+        let mAway = '';
+        if (shouldUseFirebase()) {
+          try {
+            const mSnap = await getDoc(doc(db, 'matches', matchId));
+            if (mSnap.exists()) {
+              const data = mSnap.data();
+              mHome = data.homeTeam || '';
+              mAway = data.awayTeam || '';
+            }
+          } catch (err) {
+            console.error(`Error reading match ${matchId} for loser propagation:`, err);
           }
-          targetMatch.updatedAt = new Date().toISOString();
+        } else {
+          const localMatches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+          const m = localMatches.find(x => x.id === matchId);
+          if (m) {
+            mHome = m.homeTeam;
+            mAway = m.awayTeam;
+          }
+        }
 
-          if (targetMatch.status === 'finished') {
-            targetMatch.status = 'pending';
-            targetMatch.homeScore = null;
-            targetMatch.awayScore = null;
-            targetMatch.winner = null;
-            setLocalData('matches', matches);
-            await this.propagateKnockoutWinner(targetMatchId, null);
+        if (mHome && mAway) {
+          if (winnerTeam === mHome) loserTeam = mAway;
+          else if (winnerTeam === mAway) loserTeam = mHome;
+          else loserTeam = winnerTeam === mHome ? mAway : mHome;
+        }
+      }
+
+      const finalLoserTeam = loserTeam || `Perdedor M${idx} de SEMIS 🥉`;
+
+      if (shouldUseFirebase()) {
+        try {
+          const targetRef = doc(db, 'matches', targetMatchId);
+          const targetSnap = await getDoc(targetRef);
+
+          const updates: any = {
+            [slot === 'home' ? 'homeTeam' : 'awayTeam']: finalLoserTeam,
+            updatedAt: Timestamp.now()
+          };
+
+          if (!targetSnap.exists()) {
+            const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
+            const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalLoserTeam, dateObj.toISOString());
+            const matchPayload = {
+              ...initialData,
+              matchDate: Timestamp.fromDate(new Date(initialData.matchDate)),
+              status: 'pending',
+              createdAt: Timestamp.now()
+            };
+            await setDoc(targetRef, matchPayload);
           } else {
+            const currentTargetData = targetSnap.data();
+            const currentTeamInSlot = slot === 'home' ? currentTargetData.homeTeam : currentTargetData.awayTeam;
+
+            if (currentTeamInSlot !== finalLoserTeam) {
+              if (currentTargetData.status === 'finished') {
+                updates.status = 'pending';
+                updates.homeScore = null;
+                updates.awayScore = null;
+                updates.winner = null;
+                await updateDoc(targetRef, updates);
+              } else {
+                await updateDoc(targetRef, updates);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Error propagating loser for ${matchId} to ${targetMatchId}:`, err);
+        }
+      } else {
+        const matches = getLocalData<SoccerMatch>('matches', SEED_MATCHES);
+        let targetIdx = matches.findIndex(m => m.id === targetMatchId);
+
+        if (targetIdx === -1) {
+          const dateObj = this.calculateKnockoutMatchDate(targetMatchId);
+          const initialData = this.getInitialKnockoutMatchData(targetMatchId, slot, finalLoserTeam, dateObj.toISOString());
+          const newMatch: SoccerMatch = {
+            id: targetMatchId,
+            ...initialData,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          };
+          matches.push(newMatch);
+          setLocalData('matches', matches);
+        } else {
+          const targetMatch = matches[targetIdx];
+          const currentTeamInSlot = slot === 'home' ? targetMatch.homeTeam : targetMatch.awayTeam;
+
+          if (currentTeamInSlot !== finalLoserTeam) {
+            if (slot === 'home') {
+              targetMatch.homeTeam = finalLoserTeam;
+            } else {
+              targetMatch.awayTeam = finalLoserTeam;
+            }
+            targetMatch.updatedAt = new Date().toISOString();
+
+            if (targetMatch.status === 'finished') {
+              targetMatch.status = 'pending';
+              targetMatch.homeScore = null;
+              targetMatch.awayScore = null;
+              targetMatch.winner = null;
+            }
             setLocalData('matches', matches);
           }
         }
+        window.dispatchEvent(new Event('prode_db_updated'));
       }
-      window.dispatchEvent(new Event('prode_db_updated'));
     }
   }
 };

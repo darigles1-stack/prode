@@ -28,12 +28,14 @@ export const ProdeGeneral: React.FC<ProdeGeneralProps> = ({
     return Date.now() >= lockTime;
   };
 
-  // Filter matches to make column set more readable if desired
-  const displayMatches = matches.filter(m => {
-    if (matchFilter === 'pending') return m.status === 'pending';
-    if (matchFilter === 'finished') return m.status === 'finished';
-    return true;
-  });
+  // Filter matches to make column set more readable if desired and sort chronologically
+  const displayMatches = matches
+    .filter(m => {
+      if (matchFilter === 'pending') return m.status === 'pending';
+      if (matchFilter === 'finished') return m.status === 'finished';
+      return true;
+    })
+    .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
 
   // Filter rows (participants)
   const displayStandings = standings.filter(s =>

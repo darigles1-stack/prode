@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Trophy, Calendar, Sparkles, Sliders, ChevronRight, HelpCircle, GitCommit } from 'lucide-react';
+import { Trophy, Calendar, Sparkles, Sliders, ChevronRight, HelpCircle, GitCommit, Volume2, VolumeX, SkipForward } from 'lucide-react';
 import { SoccerMatch } from '../types';
 import { OFFICIAL_WORLD_STAGE_MATCHES, getFlagForCountry, getCountryCode } from '../lib/worldCupData';
 // @ts-ignore
 import copaImg from '../assets/images/copa3.png';
+// @ts-ignore
+import finalBgImg from '../assets/images/final.png';
 
 interface PosicionesYCopasProps {
   matches: SoccerMatch[];
@@ -18,6 +20,83 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, ini
       setSubTab(initialSubTab);
     }
   }, [initialSubTab]);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const playlist = React.useMemo(() => [
+    '/tema1.mp3',
+    '/tema2.mp3',
+    '/tema4.mp3',
+    '/tema5.mp3',
+    '/tema6.mp3',
+    '/tema7.mp3'
+  ], []);
+
+  React.useEffect(() => {
+    if (subTab === 'llaves') {
+      const trackPath = playlist[currentTrackIdx];
+      const audio = new Audio(trackPath);
+      audio.loop = false;
+      audioRef.current = audio;
+
+      const playAudio = async () => {
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.log(`Autoplay block or failed play for ${trackPath}:`, err);
+        }
+      };
+
+      playAudio();
+
+      const handleEnded = () => {
+        setCurrentTrackIdx(prev => (prev + 1) % playlist.length);
+      };
+
+      const handleError = () => {
+        console.warn(`Audio error on ${trackPath}. Skipping to next.`);
+        setCurrentTrackIdx(prev => (prev + 1) % playlist.length);
+      };
+
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+
+      return () => {
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('error', handleError);
+        audio.pause();
+        audioRef.current = null;
+        setIsPlaying(false);
+      };
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+        setIsPlaying(false);
+      }
+    }
+  }, [subTab, currentTrackIdx, playlist]);
+
+  const toggleMute = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error("Failed to play audio:", err);
+      });
+    }
+  };
+
+  const handleNextTrack = () => {
+    setCurrentTrackIdx(prev => (prev + 1) % playlist.length);
+  };
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
 
   // --- 1. DYNAMIC GROUP STANDING CALCULATIONS ---
@@ -628,27 +707,66 @@ export const PosicionesYCopas: React.FC<PosicionesYCopasProps> = ({ matches, ini
 
               {/* --- CENTRAL PORTION (WORLD CHAMPIONS & TROPHY) --- */}
 
-              <div className="flex flex-col justify-center items-center h-[750px] w-[260px] shrink-0 select-none text-center gap-6">
-                <div className="text-zinc-500 font-mono text-[10px] uppercase font-black tracking-widest">WORLD CHAMPIONS</div>
+              <div className="flex flex-col justify-center items-center h-[750px] w-[260px] shrink-0 select-none text-center gap-3 relative rounded-2xl z-10">
+                {/* Faded Background Image */}
+                <div 
+                  className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[780px] -z-10 bg-center bg-no-repeat bg-contain pointer-events-none select-none"
+                  style={{ 
+                    backgroundImage: `url(${finalBgImg})`,
+                    opacity: 0.35
+                  }}
+                />
+
+                {/* Audio Controls Bar */}
+                <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-black/60 border border-zinc-800/80 p-1 rounded-xl shadow-lg">
+                  {/* Mute/Unmute Button */}
+                  <button 
+                    onClick={toggleMute}
+                    className="p-1.5 rounded-lg hover:bg-zinc-800/60 text-zinc-400 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                    title={isPlaying ? "Silenciar música 🔊" : "Activar música 🔇"}
+                  >
+                    {isPlaying ? (
+                      <Volume2 className="h-5 w-5 animate-pulse text-yellow-400" />
+                    ) : (
+                      <VolumeX className="h-5 w-5 text-zinc-500" />
+                    )}
+                  </button>
+
+                  {/* Skip to Next Button */}
+                  <button 
+                    onClick={handleNextTrack}
+                    className="p-1.5 rounded-lg hover:bg-zinc-800/60 text-zinc-400 hover:text-white transition-all cursor-pointer flex items-center justify-center border-l border-zinc-800/60 pl-2"
+                    title="Siguiente canción ⏭️"
+                  >
+                    <SkipForward className="h-5 w-5 text-zinc-400 hover:text-zinc-200" />
+                  </button>
+                </div>
+
+                <div className="text-zinc-500 font-mono text-[9px] uppercase font-black tracking-widest">WORLD CHAMPIONS</div>
                 
                 {/* FIFA Trophy Container with gold radial glow using copaImg */}
-                 <div className="relative flex items-center justify-center py-2">
+                 <div className="relative flex items-center justify-center py-1">
                    <img 
                      src={copaImg} 
                      alt="Copa del Mundo" 
-                     className="w-28 h-36 object-contain drop-shadow-[0_0_35px_rgba(251,191,36,0.4)]"
+                     className="w-24 h-32 object-contain drop-shadow-[0_0_35px_rgba(251,191,36,0.4)]"
                    />
                    <div className="absolute -inset-4 bg-amber-400/5 rounded-full blur-2xl -z-10 animate-pulse"></div>
                  </div>
 
-                <div className="text-zinc-400 font-mono text-[9px] uppercase tracking-widest">BRONZE WINNER</div>
-                
                 {/* Gran Final Card */}
                 <div className="w-full flex justify-center">
-                  {renderBracketMatchCard(knockoutPhases['final'][0], "GRAN FINAL", "Ganador Semifinales")}
+                  {renderBracketMatchCard((knockoutPhases['final'] || []).find(m => m.id === 'final_1'), "GRAN FINAL", "Ganador Semifinales")}
                 </div>
 
-                <div className="mt-4 flex flex-col items-center gap-1">
+                <div className="text-zinc-400 font-mono text-[9px] uppercase font-black tracking-widest mt-2">BRONZE WINNER</div>
+                
+                {/* Tercer Puesto Card */}
+                <div className="w-full flex justify-center">
+                  {renderBracketMatchCard((knockoutPhases['final'] || []).find(m => m.id === 'final_2' || m.id === 'tercer_1'), "TERCER PUESTO", "Perdedor Semifinales")}
+                </div>
+
+                <div className="mt-2 flex flex-col items-center gap-1">
                   <span className="text-[12px] font-black tracking-[0.2em] text-amber-500/80 uppercase font-mono">2026</span>
                   <span className="text-[9px] font-black tracking-widest text-zinc-600 uppercase font-mono">FIFA WORLD CUP</span>
                 </div>

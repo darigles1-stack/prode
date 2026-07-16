@@ -221,14 +221,16 @@ export const MatchesList: React.FC<MatchesListProps> = ({
   };
 
   // Filter matches
-  const filteredMatches = matches.filter(m => {
-    const matchPhase = m.phase || 'grupos';
-    if (matchPhase !== selectedPhase) return false;
+  const filteredMatches = matches
+    .filter(m => {
+      const matchPhase = m.phase || 'grupos';
+      if (matchPhase !== selectedPhase) return false;
 
-    if (filter === 'pending') return m.status === 'pending';
-    if (filter === 'finished') return m.status === 'finished';
-    return true;
-  });
+      if (filter === 'pending') return m.status === 'pending';
+      if (filter === 'finished') return m.status === 'finished';
+      return true;
+    })
+    .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
 
   const phasesList = [
     { tag: 'grupos', title: 'Fase de Grupos' },
@@ -236,7 +238,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
     { tag: '8vos', title: '8vos de Final' },
     { tag: 'cuartos', title: 'Cuartos de Final' },
     { tag: 'semis', title: 'Semifinales' },
-    { tag: 'final', title: 'Gran Final' }
+    { tag: 'final', title: 'Gran Final y Tercer Puesto' }
   ];
 
   return (
@@ -832,7 +834,7 @@ export const MatchesList: React.FC<MatchesListProps> = ({
                   '8vos': '8vos de Final 🛡️',
                   'cuartos': 'Cuartos de Final 🥇',
                   'semis': 'Semifinales 🌟',
-                  'final': 'Gran Final 👑'
+                  'final': 'Gran Final y Tercer Puesto 👑'
                 };
                 return phaseLabels[selectedPhase] || selectedPhase;
               })()
